@@ -6,7 +6,7 @@
         public string GroupName { get; set; }
         public string Description { get; set; }
         public int ProjectID { get; set; }
-        public int GroupLeadID { get; set; }
+        public string GroupLeadID { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 

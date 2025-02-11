@@ -5,7 +5,7 @@
         public int DiscussionID { get; set; }
         public int ProjectID { get; set; }
         public int GroupID { get; set; }
-        public int UserID { get; set; }
+        public string UserID { get; set; }
         public string Message { get; set; }
         public DateTime CreatedAt { get; set; }
 

@@ -8,7 +8,7 @@
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public int CompanyID { get; set; }
-        public int ProjectManagerID { get; set; }
+        public string ProjectManagerID { get; set; }
         public string Visibility { get; set; } // Public or Private
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

@@ -1,14 +1,13 @@
-﻿namespace ProjectManagmentTool.Data
-{
-    public class Company
-    {
-        public int CompanyID { get; set; }
-        public string CompanyName { get; set; }
-        public string Industry { get; set; }
-        public int CEOID { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+﻿using ProjectManagmentTool.Data;
 
-        public User CEO { get; set; }
-    }
+public class Company
+{
+    public int CompanyID { get; set; }
+    public string CompanyName { get; set; }
+    public string Industry { get; set; }
+    public string CEOID { get; set; }  // Change from int to string
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+
+    public User CEO { get; set; }
 }

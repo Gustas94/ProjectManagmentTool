@@ -8,7 +8,7 @@
         public DateTime Deadline { get; set; }
         public int ProjectID { get; set; }
         public int GroupID { get; set; }
-        public int AssignedTo { get; set; }
+        public string AssignedTo { get; set; }
         public string Status { get; set; } // To Do, In Progress, Completed
         public string Priority { get; set; } // Urgent, Medium, Low
         public DateTime CreatedAt { get; set; }

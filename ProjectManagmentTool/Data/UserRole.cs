@@ -2,8 +2,8 @@
 {
     public class UserRole
     {
-        public int UserID { get; set; }
-        public int RoleID { get; set; }
+        public string UserID { get; set; }
+        public string RoleID { get; set; }
         public int ProjectID { get; set; }  // Optional, if you're using project-specific roles
 
         public User User { get; set; }

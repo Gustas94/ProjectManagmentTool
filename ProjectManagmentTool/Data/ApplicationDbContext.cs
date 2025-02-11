@@ -1,27 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace ProjectManagmentTool.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<User>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
         }
 
-        // Define DbSets for all entities
-        public DbSet<User> Users { get; set; }
         public DbSet<Company> Companies { get; set; }
-        public DbSet<Role> Roles { get; set; }
-        public DbSet<Permission> Permissions { get; set; }
-        public DbSet<RolePermission> RolePermissions { get; set; }
-        public DbSet<Project> Projects { get; set; }
-        public DbSet<Group> Groups { get; set; }
-        public DbSet<Task> Tasks { get; set; }
-        public DbSet<Invitation> Invitations { get; set; }
-        public DbSet<Notification> Notifications { get; set; }
-        public DbSet<Discussion> Discussions { get; set; }
-        public DbSet<UserRole> UserRoles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,7 +24,8 @@ namespace ProjectManagmentTool.Data
 
                 entity.HasOne(rp => rp.Role)
                     .WithMany(r => r.RolePermissions)
-                    .HasForeignKey(rp => rp.RoleID);
+                    .HasForeignKey(rp => rp.RoleID)
+                    .HasPrincipalKey(r => r.Id); // ✅ Use 'Id' instead of 'RoleID'
 
                 entity.HasOne(rp => rp.Permission)
                     .WithMany(p => p.RolePermissions)
@@ -160,6 +151,14 @@ namespace ProjectManagmentTool.Data
                     .HasForeignKey(t => t.AssignedTo)  // Use AssignedTo as the foreign key
                     .OnDelete(DeleteBehavior.NoAction);  // Prevent cascading delete for AssignedUser
             });
+
+            modelBuilder.Entity<User>()
+                    .HasOne(u => u.Role)
+                    .WithMany()
+                    .HasForeignKey(u => u.RoleID)  // Foreign key in User
+                    .HasPrincipalKey(r => r.Id)    // Use 'Id' instead of 'RoleID'
+                    .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }
