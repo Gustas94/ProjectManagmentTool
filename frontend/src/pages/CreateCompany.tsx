@@ -28,7 +28,7 @@ const CreateCompany = () => {
     
         try {
             // 🔹 Step 1: Register the user
-            const userResponse = await axios.post('https://localhost:7045/api/auth/register', {
+            const userResponse = await axios.post('http://localhost:7045/api/auth/register', {
                 Email: email,
                 Password: password,
                 FirstName: firstName,
@@ -40,7 +40,7 @@ const CreateCompany = () => {
             const userId = userResponse.data.userId;  // Get the created user's ID
     
             // 🔹 Step 2: Create the company using the userId as CEOId
-            await axios.post('https://localhost:7045/api/company/create', {
+            await axios.post('http://localhost:7045/api/company/create', {
                 Name: companyName,
                 Industry: industry,
                 CEOId: userId
@@ -55,8 +55,7 @@ const CreateCompany = () => {
             console.error("Error response:", error.response);
             setError(error.response?.data?.message || 'Failed to create company or user');
         }
-    };
-    
+    };    
 
     return (
         <div className="flex justify-center items-center min-h-screen border-gray-500">
@@ -176,6 +175,17 @@ const CreateCompany = () => {
                         Create Company
                     </button>
                 </form>
+                <div className="mt-4 text-center">
+                    <p className="text-gray-400">
+                        Already have an account?  
+                        <button 
+                            onClick={() => navigate('/')} 
+                            className="text-blue-600 hover:text-blue-700 ml-1 underline"
+                        >
+                            Sign in here
+                        </button>
+                    </p>
+                </div>
             </div>
         </div>
     );

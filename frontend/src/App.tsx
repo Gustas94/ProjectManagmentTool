@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard.tsx';
 function App() {
   return (
       <Routes>
+        <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/create-company" element={<CreateCompany />} />
         <Route path="/dashboard" element={<Dashboard />} />

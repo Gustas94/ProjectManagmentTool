@@ -9,7 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Load configuration
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new string[0];
 
 // Database Connection
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -29,7 +28,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; // Set to true in production
+    options.RequireHttpsMetadata = false; // No HTTPS
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -46,19 +45,17 @@ builder.Services.AddAuthentication(options =>
 // Enable Authorization
 builder.Services.AddAuthorization();
 
-
-// CORS Setup
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReactApp", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173") // Your frontend origin
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials(); // Allows cookies & authentication headers
-    });
-});
-
+// REMOVE CORS SETUP
+// builder.Services.AddCors(options =>
+// {
+//     options.AddPolicy("AllowReactApp", policy =>
+//     {
+//         policy.WithOrigins("http://localhost:5173")
+//               .AllowAnyHeader()
+//               .AllowAnyMethod()
+//               .AllowCredentials();
+//     });
+// });
 
 // Register Controllers
 builder.Services.AddControllers();
@@ -67,11 +64,11 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// CORS middleware must be before authentication
-app.UseCors("AllowReactApp");
+// EMOVE CORS Middleware
+// app.UseCors("AllowReactApp");
 
-// Ensure HTTPS redirection isn't interfering
-app.UseHttpsRedirection();
+// EMOVE HTTPS Redirection
+// app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
