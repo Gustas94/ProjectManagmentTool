@@ -20,34 +20,30 @@ const CreateCompany = () => {
         e.preventDefault();
         setError('');
         setSuccess('');
-    
+
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
         }
-    
+
         try {
-            // 🔹 Step 1: Register the user
-            const userResponse = await axios.post('http://localhost:7045/api/auth/register', {
+            // 🔹 Step 1: Register the user (CEO)
+            const userResponse = await axios.post('/api/auth/register', {
                 Email: email,
                 Password: password,
                 FirstName: firstName,
                 LastName: lastName
-            }, {
-                withCredentials: true
             });
-    
-            const userId = userResponse.data.userId;  // Get the created user's ID
-    
+
+            const userId = userResponse.data.userId; // Get the created user's ID
+
             // 🔹 Step 2: Create the company using the userId as CEOId
-            await axios.post('http://localhost:7045/api/company/create', {
+            await axios.post('/api/company/create', {
                 Name: companyName,
                 Industry: industry,
                 CEOId: userId
-            }, {
-                withCredentials: true
             });
-    
+
             setSuccess('Company and user created successfully!');
             navigate('/dashboard');
         } catch (err: unknown) {
@@ -55,7 +51,7 @@ const CreateCompany = () => {
             console.error("Error response:", error.response);
             setError(error.response?.data?.message || 'Failed to create company or user');
         }
-    };    
+    };
 
     return (
         <div className="flex justify-center items-center min-h-screen border-gray-500">

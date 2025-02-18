@@ -41,9 +41,9 @@ namespace ProjectManagmentTool.Controllers
                 return BadRequest("Email is already taken.");
 
             // 🔹 Fetch the Role ID from the database
-            var userRole = await _roleManager.Roles.FirstOrDefaultAsync(r => r.NormalizedName == "USER");
+            var userRole = await _roleManager.Roles.FirstOrDefaultAsync(r => r.NormalizedName == "CEO");
             if (userRole == null)
-                return StatusCode(500, "User role does not exist. Please create it first.");
+                return StatusCode(500, "CEO role does not exist. Please create it first.");
 
             var user = new User
             {
@@ -60,7 +60,7 @@ namespace ProjectManagmentTool.Controllers
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
-            await _userManager.AddToRoleAsync(user, "User"); // ssign role using Identity
+            await _userManager.AddToRoleAsync(user, "CEO"); // ssign role using Identity
 
             return Ok(new { userId = user.Id, message = "User registered successfully and assigned to role." });
         }

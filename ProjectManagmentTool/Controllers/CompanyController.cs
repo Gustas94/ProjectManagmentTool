@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using ProjectManagmentTool.Data;
 using System;
 using System.Threading.Tasks;
@@ -10,10 +11,12 @@ namespace ProjectManagmentTool.Controllers
     public class CompanyController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<User> _userManager;
 
-        public CompanyController(ApplicationDbContext context)
+        public CompanyController(ApplicationDbContext context, UserManager<User> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         [HttpPost("create")]
@@ -32,14 +35,14 @@ namespace ProjectManagmentTool.Controllers
             await _context.SaveChangesAsync();
 
             // Update user's CompanyID after company creation
-            var user = await _context.Users.FindAsync(request.CEOId);
+            var user = await _userManager.FindByIdAsync(request.CEOId);
             if (user != null)
             {
                 user.CompanyID = company.CompanyID;  // Assign the created company ID
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new { message = "Company created successfully." });
+            return Ok(new { message = "Company created successfully and CEO assigned." });
         }
     }
 
