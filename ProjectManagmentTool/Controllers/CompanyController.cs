@@ -20,29 +20,43 @@ namespace ProjectManagmentTool.Controllers
         }
 
         [HttpPost("create")]
-        public async Task<IActionResult> CreateCompany([FromBody] CreateCompanyRequest request)
+        public async Task<IActionResult> CreateProject([FromBody] Project request)
         {
-            var company = new Company
+            if (string.IsNullOrEmpty(request.ProjectManagerID))
+                return BadRequest("Project Manager ID is required.");
+
+            if (request.CompanyID <= 0)
+                return BadRequest("Company ID is required.");
+
+            // Fetch Company
+            var company = await _context.Companies.FindAsync(request.CompanyID);
+            if (company == null)
+                return BadRequest("Company not found.");
+
+            // Fetch Project Manager
+            var projectManager = await _context.Users.FindAsync(request.ProjectManagerID);
+            if (projectManager == null)
+                return BadRequest("Project Manager not found.");
+
+            var project = new Project
             {
-                CompanyName = request.Name,
-                Industry = request.Industry,
-                CEOID = request.CEOId,
+                ProjectName = request.ProjectName,
+                Description = request.Description,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                CompanyID = request.CompanyID,
+                ProjectManagerID = request.ProjectManagerID,
+                Company = company,  // ✅ Assign Company object
+                ProjectManager = projectManager,  // ✅ Assign ProjectManager object
+                Visibility = request.Visibility,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Companies.Add(company);
+            _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
-            // Update user's CompanyID after company creation
-            var user = await _userManager.FindByIdAsync(request.CEOId);
-            if (user != null)
-            {
-                user.CompanyID = company.CompanyID;  // Assign the created company ID
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new { message = "Company created successfully and CEO assigned." });
+            return Ok(new { message = "Project created successfully", projectId = project.ProjectID });
         }
     }
 

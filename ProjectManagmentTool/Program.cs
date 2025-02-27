@@ -44,32 +44,29 @@ builder.Services.AddAuthentication(options =>
 
 // Enable Authorization
 builder.Services.AddAuthorization();
-
-// REMOVE CORS SETUP
-// builder.Services.AddCors(options =>
-// {
-//     options.AddPolicy("AllowReactApp", policy =>
-//     {
-//         policy.WithOrigins("http://localhost:5173")
-//               .AllowAnyHeader()
-//               .AllowAnyMethod()
-//               .AllowCredentials();
-//     });
-// });
-
-// Register Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+// Corrected CORS Policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")  // Allow frontend
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();  // Required for authentication
+    });
+});
+
 var app = builder.Build();
 
-// EMOVE CORS Middleware
-// app.UseCors("AllowReactApp");
+// Apply CORS BEFORE authentication & authorization
+app.UseCors("AllowReactApp");
 
-// EMOVE HTTPS Redirection
-// app.UseHttpsRedirection();
-
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -12,6 +12,8 @@ namespace ProjectManagmentTool.Data
         }
 
         public DbSet<Company> Companies { get; set; }
+        public DbSet<Project> Projects { get; set; }
+        public DbSet<UserProject> UserProjects { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -75,8 +77,9 @@ namespace ProjectManagmentTool.Data
                 entity.HasOne(p => p.ProjectManager)
                     .WithMany()
                     .HasForeignKey(p => p.ProjectManagerID)
-                    .OnDelete(DeleteBehavior.NoAction);  // Changed to prevent multiple cascade paths
+                    .OnDelete(DeleteBehavior.NoAction); // Prevents cascading delete
             });
+
 
             // Configure Group relationships
             modelBuilder.Entity<Group>(entity =>
@@ -158,6 +161,24 @@ namespace ProjectManagmentTool.Data
                     .HasForeignKey(u => u.RoleID)  // Foreign key in User
                     .HasPrincipalKey(r => r.Id)    // Use 'Id' instead of 'RoleID'
                     .OnDelete(DeleteBehavior.Restrict);
+
+            //Many-to-Many Relationship for Users & Projects
+            // Define composite key for UserProject table
+            modelBuilder.Entity<UserProject>()
+                .HasKey(up => new { up.UserID, up.ProjectID });
+
+            // Define relationships for UserProject
+            modelBuilder.Entity<UserProject>()
+                .HasOne(up => up.User)
+                .WithMany()
+                .HasForeignKey(up => up.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserProject>()
+                .HasOne(up => up.Project)
+                .WithMany()
+                .HasForeignKey(up => up.ProjectID)
+                .OnDelete(DeleteBehavior.Cascade);
 
         }
     }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectManagmentTool.Data;
 
@@ -11,9 +12,11 @@ using ProjectManagmentTool.Data;
 namespace ProjectManagmentTool.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250227131620_AddProjectsTable")]
+    partial class AddProjectsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -195,54 +198,6 @@ namespace ProjectManagmentTool.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Project", b =>
-                {
-                    b.Property<int>("ProjectID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProjectID"));
-
-                    b.Property<int>("CompanyID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ProjectManagerID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ProjectName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Visibility")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("ProjectID");
-
-                    b.HasIndex("CompanyID");
-
-                    b.HasIndex("ProjectManagerID");
-
-                    b.ToTable("Projects");
-                });
-
             modelBuilder.Entity("ProjectManagmentTool.Data.Discussion", b =>
                 {
                     b.Property<int>("DiscussionID")
@@ -380,6 +335,54 @@ namespace ProjectManagmentTool.Migrations
                     b.HasKey("PermissionID");
 
                     b.ToTable("Permission");
+                });
+
+            modelBuilder.Entity("ProjectManagmentTool.Data.Project", b =>
+                {
+                    b.Property<int>("ProjectID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProjectID"));
+
+                    b.Property<int>("CompanyID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProjectManagerID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ProjectID");
+
+                    b.HasIndex("CompanyID");
+
+                    b.HasIndex("ProjectManagerID");
+
+                    b.ToTable("Projects");
                 });
 
             modelBuilder.Entity("ProjectManagmentTool.Data.RolePermission", b =>
@@ -543,21 +546,6 @@ namespace ProjectManagmentTool.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("ProjectManagmentTool.Data.UserProject", b =>
-                {
-                    b.Property<string>("UserID")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("ProjectID")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserID", "ProjectID");
-
-                    b.HasIndex("ProjectID");
-
-                    b.ToTable("UserProjects");
-                });
-
             modelBuilder.Entity("ProjectManagmentTool.Data.UserRole", b =>
                 {
                     b.Property<string>("UserID")
@@ -650,25 +638,6 @@ namespace ProjectManagmentTool.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Project", b =>
-                {
-                    b.HasOne("Company", "Company")
-                        .WithMany()
-                        .HasForeignKey("CompanyID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ProjectManagmentTool.Data.User", "ProjectManager")
-                        .WithMany()
-                        .HasForeignKey("ProjectManagerID")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Company");
-
-                    b.Navigation("ProjectManager");
-                });
-
             modelBuilder.Entity("ProjectManagmentTool.Data.Discussion", b =>
                 {
                     b.HasOne("ProjectManagmentTool.Data.Group", "Group")
@@ -677,7 +646,7 @@ namespace ProjectManagmentTool.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("Project", "Project")
+                    b.HasOne("ProjectManagmentTool.Data.Project", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectID")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -704,7 +673,7 @@ namespace ProjectManagmentTool.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("Project", "Project")
+                    b.HasOne("ProjectManagmentTool.Data.Project", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -732,6 +701,25 @@ namespace ProjectManagmentTool.Migrations
                     b.Navigation("Company");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ProjectManagmentTool.Data.Project", b =>
+                {
+                    b.HasOne("Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectManagmentTool.Data.User", "ProjectManager")
+                        .WithMany()
+                        .HasForeignKey("ProjectManagerID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("ProjectManager");
                 });
 
             modelBuilder.Entity("ProjectManagmentTool.Data.RolePermission", b =>
@@ -767,7 +755,7 @@ namespace ProjectManagmentTool.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Project", "Project")
+                    b.HasOne("ProjectManagmentTool.Data.Project", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectID")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -798,28 +786,9 @@ namespace ProjectManagmentTool.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("ProjectManagmentTool.Data.UserProject", b =>
-                {
-                    b.HasOne("Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ProjectManagmentTool.Data.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Project");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("ProjectManagmentTool.Data.UserRole", b =>
                 {
-                    b.HasOne("Project", "Project")
+                    b.HasOne("ProjectManagmentTool.Data.Project", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectID")
                         .OnDelete(DeleteBehavior.NoAction)
