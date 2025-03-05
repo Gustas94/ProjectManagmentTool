@@ -3,12 +3,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjectManagmentTool.Data
 {
-    public class UserProject
+    public class UserTask
     {
         public string UserID { get; set; }
-        public int ProjectID { get; set; }
+        public int TaskID { get; set; }
 
         public User User { get; set; }
-        public Project Project { get; set; }
+        public ProjectTask Task { get; set; }
     }
 }

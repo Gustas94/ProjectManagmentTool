@@ -21,5 +21,5 @@ public class Project
     [JsonIgnore]
     public User ProjectManager { get; set; }
 
-    public List<UserProject> UserProjects { get; set; } = new ();
+    public ICollection<UserProject> UserProjects { get; set; } = new List<UserProject>();
 }

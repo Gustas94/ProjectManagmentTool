@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import Navbar from "../components/navbar";
+import Navbar from "../components/Navbar";
 
 const Dashboard = () => {
   const [userInfo, setUserInfo] = useState({ firstName: "User", lastName: "", role: "Loading..." });
+  const [inviteLink, setInviteLink] = useState<string | null>(null);  // ✅ Stores generated link
 
   // Fetch user data (name & role)
   useEffect(() => {
@@ -20,10 +21,39 @@ const Dashboard = () => {
     fetchUserInfo();
   }, []);
 
+  // ✅ Function to Create Invitation
+  const createInvitation = async () => {
+    try {
+      const response = await axios.post("/api/invitations/create", {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      setInviteLink(response.data.link);  // ✅ Update state with generated link
+    } catch (error) {
+      console.error("Failed to create invitation:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Navbar */}
       <Navbar userInfo={userInfo} />
+
+      {/* Invitation Section */}
+      <div className="p-6">
+        <button className="bg-green-600 px-4 py-2 rounded mt-4" onClick={createInvitation}>
+          ➕ Create Invitation Link
+        </button>
+
+        {/* ✅ Show Generated Invitation Link */}
+        {inviteLink && (
+          <div className="mt-4 bg-gray-800 p-4 rounded">
+            <p className="text-white">📨 Invitation Link:</p>
+            <a href={inviteLink} className="text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer">
+              {inviteLink}
+            </a>
+          </div>
+        )}
+      </div>
 
       {/* Main Layout */}
       <div className="flex p-6 gap-6">

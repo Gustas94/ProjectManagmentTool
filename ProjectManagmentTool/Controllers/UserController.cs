@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagmentTool.Data;
+using ProjectManagmentTool.DTOs;
 using System;
 using System.Linq;
 using System.Security.Claims;
@@ -80,6 +81,56 @@ namespace ProjectManagmentTool.Controllers
                 role = user.Role != null ? user.Role.Name : "Unknown",
                 companyID = user.CompanyID
             });
+        }
+
+        [HttpGet("project/{projectId}")]
+        public async Task<IActionResult> GetUsersByProject(int projectId)
+        {
+            var users = await _context.ProjectUsers
+                .Where(pu => pu.ProjectID == projectId)
+                .Select(pu => new
+                {
+                    pu.User.Id,
+                    pu.User.FirstName,
+                    pu.User.LastName
+                })
+                .ToListAsync();
+
+            if (!users.Any())
+            {
+                return NotFound("No members found for this project.");
+            }
+
+            return Ok(users);
+        }
+
+        [HttpPost("project/add")]
+        public async Task<IActionResult> AddUserToProject([FromBody] AddUserToProjectRequest request)
+        {
+            var userExists = await _context.Users.AnyAsync(u => u.Id == request.UserID);
+            if (!userExists)
+                return NotFound("User not found.");
+
+            var projectExists = await _context.Projects.AnyAsync(p => p.ProjectID == request.ProjectID);
+            if (!projectExists)
+                return NotFound("Project not found.");
+
+            var existingAssignment = await _context.ProjectUsers
+                .AnyAsync(pu => pu.UserID == request.UserID && pu.ProjectID == request.ProjectID);
+
+            if (existingAssignment)
+                return BadRequest("User is already assigned to this project.");
+
+            var projectUser = new ProjectUser
+            {
+                UserID = request.UserID,
+                ProjectID = request.ProjectID
+            };
+
+            _context.ProjectUsers.Add(projectUser);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User added to project successfully." });
         }
     }
 }

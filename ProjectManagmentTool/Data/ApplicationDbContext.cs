@@ -14,6 +14,11 @@ namespace ProjectManagmentTool.Data
         public DbSet<Company> Companies { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<UserProject> UserProjects { get; set; }
+        public DbSet<ProjectTask> Tasks { get; set; }
+        public DbSet<UserTask> UserTasks { get; set; }
+        public DbSet<ProjectUser> ProjectUsers { get; set; }
+        public DbSet<Invitation> Invitations { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -137,22 +142,24 @@ namespace ProjectManagmentTool.Data
                 .HasForeignKey(d => d.UserID)
                 .OnDelete(DeleteBehavior.NoAction);  // Prevent cascading delete for User
 
-            modelBuilder.Entity<Task>(entity =>
+            modelBuilder.Entity<ProjectTask>(entity =>
             {
+                entity.HasKey(t => t.TaskID);
+
                 entity.HasOne(t => t.Project)
                     .WithMany()
                     .HasForeignKey(t => t.ProjectID)
-                    .OnDelete(DeleteBehavior.NoAction);  // Prevent cascading delete for Project
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(t => t.Group)
                     .WithMany()
                     .HasForeignKey(t => t.GroupID)
-                    .OnDelete(DeleteBehavior.Cascade);  // Cascade delete for Group (no issue here)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(t => t.AssignedUser)
                     .WithMany()
-                    .HasForeignKey(t => t.AssignedTo)  // Use AssignedTo as the foreign key
-                    .OnDelete(DeleteBehavior.NoAction);  // Prevent cascading delete for AssignedUser
+                    .HasForeignKey(t => t.AssignedTo)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<User>()
@@ -162,22 +169,57 @@ namespace ProjectManagmentTool.Data
                     .HasPrincipalKey(r => r.Id)    // Use 'Id' instead of 'RoleID'
                     .OnDelete(DeleteBehavior.Restrict);
 
-            //Many-to-Many Relationship for Users & Projects
-            // Define composite key for UserProject table
-            modelBuilder.Entity<UserProject>()
-                .HasKey(up => new { up.UserID, up.ProjectID });
 
-            // Define relationships for UserProject
-            modelBuilder.Entity<UserProject>()
-                .HasOne(up => up.User)
+            modelBuilder.Entity<UserProject>(entity =>
+            {
+                entity.HasKey(up => new { up.UserID, up.ProjectID });
+
+                entity.HasOne(up => up.User)
+                    .WithMany()
+                    .HasForeignKey(up => up.UserID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(up => up.Project)
+                    .WithMany(p => p.UserProjects)
+                    .HasForeignKey(up => up.ProjectID)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            modelBuilder.Entity<UserTask>(entity =>
+            {
+                entity.HasKey(ut => new { ut.UserID, ut.TaskID });
+
+                entity.HasOne(ut => ut.User)
+                    .WithMany()
+                    .HasForeignKey(ut => ut.UserID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ut => ut.Task)
+                    .WithMany()
+                    .HasForeignKey(ut => ut.TaskID)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ProjectUser>()
+                .HasKey(pu => new { pu.UserID, pu.ProjectID }); // Composite Key
+
+            modelBuilder.Entity<ProjectUser>()
+                .HasOne(pu => pu.User)
                 .WithMany()
-                .HasForeignKey(up => up.UserID)
+                .HasForeignKey(pu => pu.UserID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<UserProject>()
-                .HasOne(up => up.Project)
+            modelBuilder.Entity<ProjectUser>()
+                .HasOne(pu => pu.Project)
                 .WithMany()
-                .HasForeignKey(up => up.ProjectID)
+                .HasForeignKey(pu => pu.ProjectID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Invitation>()
+                .HasOne(i => i.Company)
+                .WithMany()
+                .HasForeignKey(i => i.CompanyID)
                 .OnDelete(DeleteBehavior.Cascade);
 
         }

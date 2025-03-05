@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectManagmentTool.Data;
 
@@ -11,9 +12,11 @@ using ProjectManagmentTool.Data;
 namespace ProjectManagmentTool.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250305152704_AddProjectUsersTable")]
+    partial class AddProjectUsersTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -332,6 +335,7 @@ namespace ProjectManagmentTool.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("ExpiresAt")
@@ -342,6 +346,7 @@ namespace ProjectManagmentTool.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RoleID")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("InvitationID");
@@ -350,7 +355,7 @@ namespace ProjectManagmentTool.Migrations
 
                     b.HasIndex("RoleID");
 
-                    b.ToTable("Invitations");
+                    b.ToTable("Invitation");
                 });
 
             modelBuilder.Entity("ProjectManagmentTool.Data.Permission", b =>
@@ -757,7 +762,8 @@ namespace ProjectManagmentTool.Migrations
                     b.HasOne("ProjectManagmentTool.Data.Role", "Role")
                         .WithMany()
                         .HasForeignKey("RoleID")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Company");
 

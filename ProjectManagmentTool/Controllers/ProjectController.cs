@@ -99,5 +99,46 @@ namespace ProjectManagmentTool.Controllers
 
             return Ok(projects);
         }
+
+        [HttpGet("{projectId}")]
+        public async Task<IActionResult> GetProjectById(int projectId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized("User is not authenticated.");
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var project = await _context.Projects
+                .Where(p => p.ProjectID == projectId && p.CompanyID == user.CompanyID) // Only allow access to the same company
+                .Select(p => new
+                {
+                    p.ProjectID,
+                    p.ProjectName,
+                    p.Description,
+                    p.StartDate,
+                    p.EndDate,
+                    p.Visibility,
+                    ProjectManagerName = _context.Users
+                        .Where(u => u.Id == p.ProjectManagerID)
+                        .Select(u => u.FirstName + " " + u.LastName)
+                        .FirstOrDefault(),
+
+                    MembersCount = _context.UserProjects
+                        .Where(up => up.ProjectID == p.ProjectID)
+                        .Count(),
+
+                    p.CreatedAt,
+                    p.UpdatedAt
+                })
+                .FirstOrDefaultAsync();
+
+            if (project == null)
+                return NotFound("Project not found or you do not have access to it.");
+
+            return Ok(project);
+        }
     }
 }
