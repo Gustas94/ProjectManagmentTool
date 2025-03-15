@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using ProjectManagmentTool.Data;
 
 public class ProjectTask
 {
@@ -25,4 +26,6 @@ public class ProjectTask
     // Timestamps
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    public ICollection<TaskGroup> TaskGroups { get; set; } = new List<TaskGroup>();
 }

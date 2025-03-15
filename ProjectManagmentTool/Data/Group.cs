@@ -24,5 +24,8 @@ public class Group
     public ICollection<GroupMember> GroupMembers { get; set; } = new List<GroupMember>();
 
     // Tasks associated with this group
-    public virtual ICollection<ProjectTask> Tasks { get; set; } = new List<ProjectTask>();
+    public ICollection<ProjectTask> Tasks { get; set; } = new List<ProjectTask>(); // Add this line
+
+    // Navigation property for TaskGroups
+    public ICollection<TaskGroup> TaskGroups { get; set; } = new List<TaskGroup>();
 }

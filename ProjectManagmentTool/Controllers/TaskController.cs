@@ -90,7 +90,7 @@ namespace ProjectManagmentTool.Controllers
                 Description = request.Description,
                 Deadline = request.Deadline,
                 ProjectID = request.ProjectID,
-                GroupID = null, // not used in this scenario
+                // Remove direct GroupID usage since we use a join table now
                 Status = request.Status ?? "To Do",
                 Priority = request.Priority ?? "Medium",
                 CreatedAt = DateTime.UtcNow,
@@ -109,28 +109,12 @@ namespace ProjectManagmentTool.Controllers
                 }
             }
 
-            // Assign groups: retrieve group members and add them if not already added
+            // Assign groups via a join table (TaskGroup)
             if (request.AssignedGroupIDs != null)
             {
                 foreach (var groupId in request.AssignedGroupIDs)
                 {
-                    var groupMembers = await _context.GroupMembers
-                        .Where(gm => gm.GroupID == groupId)
-                        .Select(gm => gm.UserID)
-                        .ToListAsync();
-
-                    foreach (var memberId in groupMembers)
-                    {
-                        // Check if an assignment for this (TaskID, UserID) is already being tracked or exists in the database.
-                        bool alreadyTracked = _context.ChangeTracker.Entries<UserTask>()
-                            .Any(e => e.Entity.TaskID == task.TaskID && e.Entity.UserID == memberId);
-                        bool alreadyInDb = await _context.UserTasks.AnyAsync(ut => ut.TaskID == task.TaskID && ut.UserID == memberId);
-
-                        if (!alreadyTracked && !alreadyInDb)
-                        {
-                            _context.UserTasks.Add(new UserTask { UserID = memberId, TaskID = task.TaskID });
-                        }
-                    }
+                    _context.TaskGroups.Add(new TaskGroup { TaskID = task.TaskID, GroupID = groupId });
                 }
             }
 
@@ -138,7 +122,6 @@ namespace ProjectManagmentTool.Controllers
 
             return Ok(new { message = "Task created successfully", taskId = task.TaskID });
         }
-
 
         [HttpGet("{taskId}")]
         public async Task<IActionResult> GetTaskById(int taskId)
@@ -153,22 +136,40 @@ namespace ProjectManagmentTool.Controllers
                     t.Deadline,
                     t.Status,
                     t.Priority,
-                    t.ProjectID, // ✅ Ensure ProjectID is included
+                    t.ProjectID,
                     ProjectName = _context.Projects
                                         .Where(p => p.ProjectID == t.ProjectID)
                                         .Select(p => p.ProjectName)
                                         .FirstOrDefault(),
-                    AssignedUsers = _context.UserTasks
-                                        .Where(ut => ut.TaskID == t.TaskID)
-                                        .Join(_context.Users,
-                                              ut => ut.UserID,
-                                              u => u.Id,
-                                              (ut, u) => new { u.Id, u.FirstName, u.LastName })
-                                        .ToList(),
-                    AssignedGroups = _context.Groups
-                                        .Where(g => g.Tasks.Any(gt => gt.TaskID == t.TaskID))
-                                        .Select(g => new { g.GroupID, g.GroupName })
-                                        .ToList()
+                    // Individually assigned users
+                    individualAssignedUsers = _context.UserTasks
+                        .Where(ut => ut.TaskID == t.TaskID)
+                        .Join(_context.Users,
+                              ut => ut.UserID,
+                              u => u.Id,
+                              (ut, u) => new { u.Id, u.FirstName, u.LastName })
+                        .ToList(),
+                    // Assigned groups (from TaskGroups join)
+                    assignedGroups = _context.TaskGroups
+                        .Where(tg => tg.TaskID == t.TaskID)
+                        .Join(_context.Groups,
+                              tg => tg.GroupID,
+                              g => g.GroupID,
+                              (tg, g) => new { g.GroupID, g.GroupName })
+                        .ToList(),
+                    // Users assigned via groups – join TaskGroups with GroupMembers and Users.
+                    groupAssignedUsers = _context.TaskGroups
+                        .Where(tg => tg.TaskID == t.TaskID)
+                        .SelectMany(tg =>
+                            _context.GroupMembers
+                                .Where(gm => gm.GroupID == tg.GroupID)
+                                .Join(_context.Users,
+                                      gm => gm.UserID,
+                                      u => u.Id,
+                                      (gm, u) => new { u.Id, u.FirstName, u.LastName, GroupName = tg.Group.GroupName })
+                        )
+                        .Distinct()
+                        .ToList()
                 })
                 .FirstOrDefaultAsync();
 
@@ -180,18 +181,16 @@ namespace ProjectManagmentTool.Controllers
     }
 }
 
-        // Single TaskRequestDTO definition with a list of assignee user IDs.
-        public class TaskRequestDTO
-    {
-        public string TaskName { get; set; }
-        public string Description { get; set; }
-        public DateTime Deadline { get; set; }
-        public int ProjectID { get; set; }
-        // New: list of individual user IDs to assign the task
-        public List<string> AssignedUserIDs { get; set; }
-        // New: list of group IDs to assign the task
-        public List<int> AssignedGroupIDs { get; set; }
-        public string Status { get; set; }
-        public string Priority { get; set; }
-    }
-
+public class TaskRequestDTO
+{
+    public string TaskName { get; set; }
+    public string Description { get; set; }
+    public DateTime Deadline { get; set; }
+    public int ProjectID { get; set; }
+    // List of individually assigned user IDs.
+    public List<string> AssignedUserIDs { get; set; }
+    // List of group IDs to assign to the task.
+    public List<int> AssignedGroupIDs { get; set; }
+    public string Status { get; set; }
+    public string Priority { get; set; }
+}

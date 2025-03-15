@@ -21,7 +21,7 @@ namespace ProjectManagmentTool.Data
         public DbSet<Group> Groups { get; set; }
         public DbSet<ProjectGroup> ProjectGroups { get; set; }
         public DbSet<GroupMember> GroupMembers { get; set; }
-
+        public DbSet<TaskGroup> TaskGroups { get; set; }
 
 
 
@@ -152,9 +152,9 @@ namespace ProjectManagmentTool.Data
                       .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(t => t.Group)
-                      .WithMany(g => g.Tasks)
+                      .WithMany(g => g.Tasks) // Navigation property in Group
                       .HasForeignKey(t => t.GroupID)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.NoAction); // Disable cascade delete
             });
 
 
@@ -246,6 +246,21 @@ namespace ProjectManagmentTool.Data
                       .WithMany()
                       .HasForeignKey(gm => gm.UserID)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<TaskGroup>(entity =>
+            {
+                entity.HasKey(tg => new { tg.TaskID, tg.GroupID }); // Composite primary key
+
+                entity.HasOne(tg => tg.Task)
+                      .WithMany(t => t.TaskGroups) // Navigation property in ProjectTask
+                      .HasForeignKey(tg => tg.TaskID)
+                      .OnDelete(DeleteBehavior.NoAction); // Disable cascade delete
+
+                entity.HasOne(tg => tg.Group)
+                      .WithMany(g => g.TaskGroups) // Navigation property in Group
+                      .HasForeignKey(tg => tg.GroupID)
+                      .OnDelete(DeleteBehavior.NoAction); // Disable cascade delete
             });
         }
     }
