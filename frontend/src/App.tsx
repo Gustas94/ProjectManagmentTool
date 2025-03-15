@@ -6,6 +6,9 @@ import Projects from './pages/Projects.tsx';
 import CreateProject from './pages/CreateProject.tsx';
 import ProjectDetails from './pages/ProjectDetails.tsx';
 import Register from './pages/Register.tsx';
+import Groups from './pages/Groups.tsx';
+import GroupDetails from "./pages/GroupDetails";
+import TaskDetails from './pages/TaskDetails.tsx';
 
 function App() {
   return (
@@ -18,6 +21,9 @@ function App() {
         <Route path="/projects" element={<Projects />} />
         <Route path="projects/create-project" element={<CreateProject />} />
         <Route path="/projects/:projectId" element={<ProjectDetails />} />
+        <Route path="/groups" element={<Groups />} />
+        <Route path="/groups/:groupId" element={<GroupDetails />} />
+        <Route path="/tasks/:taskId" element={<TaskDetails />} />
       </Routes>
   );
 }

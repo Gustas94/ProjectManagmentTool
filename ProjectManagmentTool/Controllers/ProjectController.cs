@@ -140,5 +140,78 @@ namespace ProjectManagmentTool.Controllers
 
             return Ok(project);
         }
+
+        [HttpGet("{projectId}/groups")]
+        public async Task<IActionResult> GetGroupsForProject(int projectId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized("User is not authenticated.");
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.ProjectID == projectId && p.CompanyID == user.CompanyID);
+            if (project == null)
+                return NotFound("Project not found or you don't have access.");
+
+            var assignedGroups = await _context.ProjectGroups
+                .Where(pg => pg.ProjectID == projectId)
+                .Select(pg => new
+                {
+                    pg.Group.GroupID,
+                    pg.Group.GroupName,
+                    pg.Group.Description,
+                    GroupLeadName = pg.Group.GroupLead != null ? pg.Group.GroupLead.FirstName + " " + pg.Group.GroupLead.LastName : "N/A"
+                })
+                .ToListAsync();
+
+            return Ok(assignedGroups);
+        }
+
+        [HttpPost("{projectId}/assign-group")]
+        public async Task<IActionResult> AssignGroupToProject(int projectId, [FromBody] AssignGroupRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized("User is not authenticated.");
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.ProjectID == projectId && p.CompanyID == user.CompanyID);
+            if (project == null)
+                return NotFound("Project not found or you don't have access.");
+
+            var group = await _context.Groups.FirstOrDefaultAsync(g => g.GroupID == request.GroupID);
+            if (group == null)
+                return NotFound("Group not found.");
+
+            bool alreadyAssigned = await _context.ProjectGroups
+                .AnyAsync(pg => pg.ProjectID == projectId && pg.GroupID == request.GroupID);
+            if (alreadyAssigned)
+                return BadRequest("Group is already assigned to this project.");
+
+            var projectGroup = new ProjectGroup
+            {
+                ProjectID = projectId,
+                GroupID = request.GroupID
+            };
+
+            _context.ProjectGroups.Add(projectGroup);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Group assigned to project successfully." });
+        }
+
+        public class AssignGroupRequest
+        {
+            public int GroupID { get; set; }
+        }
+
     }
 }

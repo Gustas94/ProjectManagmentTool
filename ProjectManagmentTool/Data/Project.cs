@@ -22,4 +22,6 @@ public class Project
     public User ProjectManager { get; set; }
 
     public ICollection<UserProject> UserProjects { get; set; } = new List<UserProject>();
+    public ICollection<ProjectGroup> ProjectGroups { get; set; } = new List<ProjectGroup>();
+
 }

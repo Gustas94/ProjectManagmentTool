@@ -45,7 +45,7 @@ const Navbar: React.FC<NavbarProps> = ({ userInfo }) => {
         <button className="text-gray-300 hover:text-white" onClick={() => navigate("/projects")}>
           Projects
         </button>
-        <button className="text-gray-300 hover:text-white">Groups</button>
+        <button className="text-gray-300 hover:text-white" onClick={() => navigate("/groups")}>Groups</button>
         <button className="text-gray-300 hover:text-white">Admin Panel</button>
       </div>
 

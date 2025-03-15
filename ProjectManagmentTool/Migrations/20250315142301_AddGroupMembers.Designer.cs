@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectManagmentTool.Data;
 
@@ -11,9 +12,11 @@ using ProjectManagmentTool.Data;
 namespace ProjectManagmentTool.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250315142301_AddGroupMembers")]
+    partial class AddGroupMembers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,44 +54,6 @@ namespace ProjectManagmentTool.Migrations
                     b.HasKey("CompanyID");
 
                     b.ToTable("Companies");
-                });
-
-            modelBuilder.Entity("Group", b =>
-                {
-                    b.Property<int>("GroupID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupID"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GroupLeadID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("GroupName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ProjectID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("GroupID");
-
-                    b.HasIndex("GroupLeadID");
-
-                    b.HasIndex("ProjectID");
-
-                    b.ToTable("Groups");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -317,6 +282,39 @@ namespace ProjectManagmentTool.Migrations
                     b.ToTable("Discussion");
                 });
 
+            modelBuilder.Entity("ProjectManagmentTool.Data.Group", b =>
+                {
+                    b.Property<int>("GroupID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupID"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GroupLeadID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("GroupName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupID");
+
+                    b.HasIndex("GroupLeadID");
+
+                    b.ToTable("Groups");
+                });
+
             modelBuilder.Entity("ProjectManagmentTool.Data.GroupMember", b =>
                 {
                     b.Property<int>("GroupID")
@@ -408,6 +406,54 @@ namespace ProjectManagmentTool.Migrations
                     b.HasIndex("GroupID");
 
                     b.ToTable("ProjectGroups");
+                });
+
+            modelBuilder.Entity("ProjectManagmentTool.Data.ProjectTask", b =>
+                {
+                    b.Property<int>("TaskID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TaskID"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Deadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("GroupID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProjectID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TaskName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("TaskID");
+
+                    b.HasIndex("GroupID");
+
+                    b.HasIndex("ProjectID");
+
+                    b.ToTable("Tasks");
                 });
 
             modelBuilder.Entity("ProjectManagmentTool.Data.ProjectUser", b =>
@@ -585,54 +631,6 @@ namespace ProjectManagmentTool.Migrations
                     b.ToTable("UserTasks");
                 });
 
-            modelBuilder.Entity("ProjectTask", b =>
-                {
-                    b.Property<int>("TaskID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TaskID"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("Deadline")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("GroupID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ProjectID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TaskName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("TaskID");
-
-                    b.HasIndex("GroupID");
-
-                    b.HasIndex("ProjectID");
-
-                    b.ToTable("Tasks");
-                });
-
             modelBuilder.Entity("ProjectManagmentTool.Data.Role", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityRole");
@@ -652,23 +650,6 @@ namespace ProjectManagmentTool.Migrations
                     b.HasIndex("CompanyID");
 
                     b.HasDiscriminator().HasValue("Role");
-                });
-
-            modelBuilder.Entity("Group", b =>
-                {
-                    b.HasOne("ProjectManagmentTool.Data.User", "GroupLead")
-                        .WithMany()
-                        .HasForeignKey("GroupLeadID")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectID");
-
-                    b.Navigation("GroupLead");
-
-                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -743,7 +724,7 @@ namespace ProjectManagmentTool.Migrations
 
             modelBuilder.Entity("ProjectManagmentTool.Data.Discussion", b =>
                 {
-                    b.HasOne("Group", "Group")
+                    b.HasOne("ProjectManagmentTool.Data.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupID")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -768,9 +749,20 @@ namespace ProjectManagmentTool.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ProjectManagmentTool.Data.Group", b =>
+                {
+                    b.HasOne("ProjectManagmentTool.Data.User", "GroupLead")
+                        .WithMany()
+                        .HasForeignKey("GroupLeadID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("GroupLead");
+                });
+
             modelBuilder.Entity("ProjectManagmentTool.Data.GroupMember", b =>
                 {
-                    b.HasOne("Group", "Group")
+                    b.HasOne("ProjectManagmentTool.Data.Group", "Group")
                         .WithMany("GroupMembers")
                         .HasForeignKey("GroupID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -807,7 +799,7 @@ namespace ProjectManagmentTool.Migrations
 
             modelBuilder.Entity("ProjectManagmentTool.Data.ProjectGroup", b =>
                 {
-                    b.HasOne("Group", "Group")
+                    b.HasOne("ProjectManagmentTool.Data.Group", "Group")
                         .WithMany("ProjectGroups")
                         .HasForeignKey("GroupID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -817,6 +809,24 @@ namespace ProjectManagmentTool.Migrations
                         .WithMany("ProjectGroups")
                         .HasForeignKey("ProjectID")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("ProjectManagmentTool.Data.ProjectTask", b =>
+                {
+                    b.HasOne("ProjectManagmentTool.Data.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupID")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectID")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Group");
@@ -928,7 +938,7 @@ namespace ProjectManagmentTool.Migrations
 
             modelBuilder.Entity("ProjectManagmentTool.Data.UserTask", b =>
                 {
-                    b.HasOne("ProjectTask", "Task")
+                    b.HasOne("ProjectManagmentTool.Data.ProjectTask", "Task")
                         .WithMany()
                         .HasForeignKey("TaskID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -943,24 +953,6 @@ namespace ProjectManagmentTool.Migrations
                     b.Navigation("Task");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ProjectTask", b =>
-                {
-                    b.HasOne("Group", "Group")
-                        .WithMany("Tasks")
-                        .HasForeignKey("GroupID")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectID")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Group");
-
-                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("ProjectManagmentTool.Data.Role", b =>
@@ -979,20 +971,18 @@ namespace ProjectManagmentTool.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Group", b =>
-                {
-                    b.Navigation("GroupMembers");
-
-                    b.Navigation("ProjectGroups");
-
-                    b.Navigation("Tasks");
-                });
-
             modelBuilder.Entity("Project", b =>
                 {
                     b.Navigation("ProjectGroups");
 
                     b.Navigation("UserProjects");
+                });
+
+            modelBuilder.Entity("ProjectManagmentTool.Data.Group", b =>
+                {
+                    b.Navigation("GroupMembers");
+
+                    b.Navigation("ProjectGroups");
                 });
 
             modelBuilder.Entity("ProjectManagmentTool.Data.Permission", b =>

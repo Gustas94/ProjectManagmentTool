@@ -18,6 +18,11 @@ namespace ProjectManagmentTool.Data
         public DbSet<UserTask> UserTasks { get; set; }
         public DbSet<ProjectUser> ProjectUsers { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
+        public DbSet<Group> Groups { get; set; }
+        public DbSet<ProjectGroup> ProjectGroups { get; set; }
+        public DbSet<GroupMember> GroupMembers { get; set; }
+
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -89,15 +94,10 @@ namespace ProjectManagmentTool.Data
             // Configure Group relationships
             modelBuilder.Entity<Group>(entity =>
             {
-                entity.HasOne(g => g.Project)
-                    .WithMany()
-                    .HasForeignKey(g => g.ProjectID)
-                    .OnDelete(DeleteBehavior.Cascade);
-
                 entity.HasOne(g => g.GroupLead)
                     .WithMany()
                     .HasForeignKey(g => g.GroupLeadID)
-                    .OnDelete(DeleteBehavior.NoAction);  // Prevent multiple cascade paths
+                    .OnDelete(DeleteBehavior.NoAction); 
             });
 
             // Configure UserRole relationships
@@ -147,20 +147,16 @@ namespace ProjectManagmentTool.Data
                 entity.HasKey(t => t.TaskID);
 
                 entity.HasOne(t => t.Project)
-                    .WithMany()
-                    .HasForeignKey(t => t.ProjectID)
-                    .OnDelete(DeleteBehavior.NoAction);
+                      .WithMany()
+                      .HasForeignKey(t => t.ProjectID)
+                      .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(t => t.Group)
-                    .WithMany()
-                    .HasForeignKey(t => t.GroupID)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(t => t.AssignedUser)
-                    .WithMany()
-                    .HasForeignKey(t => t.AssignedTo)
-                    .OnDelete(DeleteBehavior.NoAction);
+                      .WithMany(g => g.Tasks)
+                      .HasForeignKey(t => t.GroupID)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
+
 
             modelBuilder.Entity<User>()
                     .HasOne(u => u.Role)
@@ -222,6 +218,35 @@ namespace ProjectManagmentTool.Data
                 .HasForeignKey(i => i.CompanyID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<ProjectGroup>(entity =>
+            {
+                entity.HasKey(pg => new { pg.ProjectID, pg.GroupID });
+
+                entity.HasOne(pg => pg.Project)
+                      .WithMany(p => p.ProjectGroups)
+                      .HasForeignKey(pg => pg.ProjectID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(pg => pg.Group)
+                      .WithMany(g => g.ProjectGroups)
+                      .HasForeignKey(pg => pg.GroupID)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<GroupMember>(entity =>
+            {
+                entity.HasKey(gm => new { gm.GroupID, gm.UserID });
+
+                entity.HasOne(gm => gm.Group)
+                      .WithMany(g => g.GroupMembers)
+                      .HasForeignKey(gm => gm.GroupID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(gm => gm.User)
+                      .WithMany()
+                      .HasForeignKey(gm => gm.UserID)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }
