@@ -301,37 +301,24 @@ const TaskDetails = () => {
                     <div className="bg-gray-800 p-6 rounded shadow-lg w-1/3">
                         <h3 className="text-lg font-bold">Add Members to Project</h3>
 
-                        {/* List of Project Members */}
-                        <div className="mt-4">
-                            {projectMembers.map((member) => (
-                                <div key={member.id} className="flex items-center mb-2">
-                                    <input
-                                        type="checkbox"
-                                        value={member.id}
-                                        onChange={handleUserCheckboxChange}
-                                        className="mr-2"
-                                    />
-                                    <label>
-                                        {member.firstName} {member.lastName}
-                                    </label>
-                                </div>
-                            ))}
-                        </div>
+                        {/* Bottom section: Display assigned users/groups */}
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold">Assigned Users</h3>
+                            <ul className="list-disc pl-5">
+                                {task.individualAssignedUsers.map(user => (
+                                    <li key={user.id}>{user.firstName} {user.lastName}</li>
+                                ))}
+                                {task.groupAssignedUsers.map(user => (
+                                    <li key={user.id}>{user.firstName} {user.lastName} ({user.groupName})</li>
+                                ))}
+                            </ul>
 
-                        {/* List of Project Groups */}
-                        <h3 className="text-lg font-bold mt-4">Groups</h3>
-                        <div className="mt-2">
-                            {projectGroups.map((group) => (
-                                <div key={group.groupID} className="flex items-center mb-2">
-                                    <input
-                                        type="checkbox"
-                                        value={group.groupID}
-                                        onChange={handleGroupCheckboxChange}
-                                        className="mr-2"
-                                    />
-                                    <label>{group.groupName}</label>
-                                </div>
-                            ))}
+                            <h3 className="text-xl font-bold mt-6">Assigned Groups</h3>
+                            <ul className="list-disc pl-5">
+                                {task.assignedGroups.map(group => (
+                                    <li key={group.groupID}>{group.groupName}</li>
+                                ))}
+                            </ul>
                         </div>
 
                         {/* Modal Buttons */}

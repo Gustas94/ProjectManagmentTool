@@ -63,6 +63,42 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var roleManager = services.GetRequiredService<RoleManager<Role>>();
+
+    string roleName = "CEO";
+    var existingRole = await roleManager.FindByNameAsync(roleName);
+
+    if (existingRole == null)
+    {
+        var role = new Role
+        {
+            Id = Guid.NewGuid().ToString(),  // Ensure unique ID
+            Name = roleName,
+            NormalizedName = roleName.ToUpper(),
+            IsCompanyRole = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var result = await roleManager.CreateAsync(role);
+        if (!result.Succeeded)
+        {
+            Console.WriteLine($"Error creating role {roleName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+        }
+        else
+        {
+            Console.WriteLine($"CEO role created successfully.");
+        }
+    }
+    else
+    {
+        Console.WriteLine($"CEO role already exists. Skipping creation.");
+    }
+}
+
 // Apply CORS BEFORE authentication & authorization
 app.UseCors("AllowReactApp");
 

@@ -178,6 +178,42 @@ namespace ProjectManagmentTool.Controllers
 
             return Ok(task);
         }
+
+        // NEW: POST endpoint to assign users and groups to an existing task
+        [HttpPost("{taskId}/assign")]
+        public async Task<IActionResult> AssignUsersAndGroups(int taskId, [FromBody] TaskAssignDTO request)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+                return NotFound("Task not found.");
+
+            // Add individual assignments if not already present
+            if (request.AssignedUserIDs != null)
+            {
+                foreach (var userId in request.AssignedUserIDs)
+                {
+                    if (!await _context.UserTasks.AnyAsync(ut => ut.TaskID == taskId && ut.UserID == userId))
+                    {
+                        _context.UserTasks.Add(new UserTask { TaskID = taskId, UserID = userId });
+                    }
+                }
+            }
+
+            // Add group assignments via TaskGroups join table if not already present
+            if (request.AssignedGroupIDs != null)
+            {
+                foreach (var groupId in request.AssignedGroupIDs)
+                {
+                    if (!await _context.TaskGroups.AnyAsync(tg => tg.TaskID == taskId && tg.GroupID == groupId))
+                    {
+                        _context.TaskGroups.Add(new TaskGroup { TaskID = taskId, GroupID = groupId });
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Assignment updated successfully" });
+        }
     }
 }
 
@@ -193,4 +229,10 @@ public class TaskRequestDTO
     public List<int> AssignedGroupIDs { get; set; }
     public string Status { get; set; }
     public string Priority { get; set; }
+}
+
+public class TaskAssignDTO
+{
+    public List<string> AssignedUserIDs { get; set; }
+    public List<int> AssignedGroupIDs { get; set; }
 }

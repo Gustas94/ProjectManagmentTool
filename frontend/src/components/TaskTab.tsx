@@ -19,17 +19,21 @@ export interface Member {
     lastName: string;
 }
 
+export interface Group {
+    groupID: number;
+    groupName: string;
+}
+
+export interface ExtendedTask extends Task {
+    assignedUserIDs: string[];
+    assignedGroupIDs: number[];
+}
+
 interface TasksTabProps {
     projectId: string;
     tasks: Task[];
     setTasks: (value: Task[] | ((prev: Task[]) => Task[])) => void;
     members: Member[];
-}
-
-export interface ExtendedTask extends Task {
-    // New fields for assignment by users and groups
-    assignedUserIDs: string[];
-    assignedGroupIDs: number[];
 }
 
 const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
@@ -44,7 +48,7 @@ const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
     // Pagination states for Groups
     const [currentGroupPage, setCurrentGroupPage] = useState<number>(1);
     const groupsPerPage = 20;
-    const [availableGroups, setAvailableGroups] = useState<{ groupID: number; groupName: string }[]>([]);
+    const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
     const totalGroupPages = Math.ceil(availableGroups.length / groupsPerPage);
 
     // The new/extended task object that includes both user & group assignment
@@ -90,6 +94,16 @@ const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
         currentGroupPage * groupsPerPage
     );
 
+    // Helper function to map group IDs to group names
+    const getGroupNames = (groupIDs: number[]) => {
+        return groupIDs
+            .map((id) => {
+                const group = availableGroups.find((g) => g.groupID === id);
+                return group ? group.groupName : id;
+            })
+            .join(", ");
+    };
+
     const createTask = async () => {
         if (
             !newTask.taskName ||
@@ -100,22 +114,27 @@ const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
             return;
         }
         try {
+            // Convert deadline and projectId to proper formats
             const formattedDeadline = new Date(newTask.deadline).toISOString();
+            const numericProjectId = parseInt(projectId, 10);
+
             const response = await axios.post(
                 "http://localhost:5045/api/tasks/create",
                 {
                     ...newTask,
                     deadline: formattedDeadline,
-                    projectID: projectId,
+                    ProjectID: numericProjectId, // using uppercase property if required by API DTO
                 },
                 { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
             );
 
+            // Update tasks list (cast newTask as ExtendedTask so group assignments are preserved)
             setTasks((prev: Task[]) => [
                 ...prev,
-                { ...newTask, taskID: response.data.taskId } as Task,
+                { ...newTask, taskID: response.data.taskId } as ExtendedTask,
             ]);
 
+            // Reset newTask state
             setNewTask({
                 taskID: 0,
                 taskName: "",
@@ -314,26 +333,34 @@ const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
                     <p className="text-gray-400">No tasks yet.</p>
                 ) : (
                     <div className="grid grid-cols-5 gap-4">
-                        {tasks.map((task) => (
-                            <div
-                                key={task.taskID}
-                                className="p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600"
-                                onClick={() => navigate(`/tasks/${task.taskID}`)} // ✅ Navigation
-                            >
-                                <h3 className="font-bold text-white">{task.taskName}</h3>
-                                <p className="text-sm text-gray-400">
-                                    🗓 Deadline: {new Date(task.deadline).toLocaleDateString()}
-                                </p>
-                                <p className="text-sm text-gray-400">📌 Priority: {task.priority}</p>
-                                <p className="text-sm text-gray-400">🚦 Status: {task.status}</p>
-                            </div>
-                        ))}
+                        {tasks.map((taskItem) => {
+                            // Cast taskItem to ExtendedTask if possible
+                            const extTask = taskItem as ExtendedTask;
+                            return (
+                                <div
+                                    key={taskItem.taskID}
+                                    className="p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600"
+                                    onClick={() => navigate(`/tasks/${taskItem.taskID}`)}
+                                >
+                                    <h3 className="font-bold text-white">{taskItem.taskName}</h3>
+                                    <p className="text-sm text-gray-400">
+                                        🗓 Deadline: {new Date(taskItem.deadline).toLocaleDateString()}
+                                    </p>
+                                    <p className="text-sm text-gray-400">📌 Priority: {taskItem.priority}</p>
+                                    <p className="text-sm text-gray-400">🚦 Status: {taskItem.status}</p>
+                                    {extTask.assignedGroupIDs && extTask.assignedGroupIDs.length > 0 && (
+                                        <p className="text-sm text-gray-400">
+                                            Groups: {getGroupNames(extTask.assignedGroupIDs)}
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
         </div>
     );
 };
-
 
 export default TasksTab;
