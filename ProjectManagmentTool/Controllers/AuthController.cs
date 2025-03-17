@@ -20,51 +20,88 @@ namespace ProjectManagmentTool.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly RoleManager<Role> _roleManager;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _context; // ✅ Injected
 
         public AuthController(
             UserManager<User> userManager,
             SignInManager<User> signInManager,
             RoleManager<Role> roleManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ApplicationDbContext context) // ✅ Injected ApplicationDbContext
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _context = context;
         }
-
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest(new { message = "Email and password are required." });
+
             if (await _userManager.FindByEmailAsync(request.Email) != null)
-                return BadRequest("Email is already taken.");
+                return BadRequest(new { message = "Email is already taken." });
 
-            // 🔹 Fetch the Role ID from the database
-            var userRole = await _roleManager.Roles.FirstOrDefaultAsync(r => r.NormalizedName == "CEO");
-            if (userRole == null)
-                return StatusCode(500, "CEO role does not exist. Please create it first.");
-
-            var user = new User
+            // If InviteCode exists, handle invited user registration
+            if (!string.IsNullOrWhiteSpace(request.InviteCode))
             {
-                UserName = request.Email,
-                Email = request.Email,
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                RoleID = userRole.Id, // Assign the correct RoleID from the database
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                var invitation = await _context.Invitations.FirstOrDefaultAsync(i => i.InviteCode == request.InviteCode);
+                if (invitation == null)
+                    return BadRequest(new { message = "Invalid or expired invite link." });
 
-            var result = await _userManager.CreateAsync(user, request.Password);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+                // Get the role assigned in the invitation
+                var userRole = await _roleManager.FindByIdAsync(invitation.RoleID.ToString());
+                if (userRole == null)
+                    return StatusCode(500, "Invalid role assigned in invitation.");
 
-            await _userManager.AddToRoleAsync(user, "CEO"); // ssign role using Identity
+                var user = new User
+                {
+                    UserName = request.Email,
+                    Email = request.Email,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    RoleID = userRole.Id,
+                    CompanyID = invitation.CompanyID, // ✅ Assign to invited company
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
 
-            return Ok(new { userId = user.Id, message = "User registered successfully and assigned to role." });
+                var result = await _userManager.CreateAsync(user, request.Password);
+                if (!result.Succeeded)
+                    return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+                await _userManager.AddToRoleAsync(user, userRole.Name);
+                return Ok(new { message = "User registered successfully via invite." });
+            }
+            else
+            {
+                // ✅ Default registration (No invite, assign CEO role)
+                var userRole = await _roleManager.Roles.FirstOrDefaultAsync(r => r.NormalizedName == "CEO");
+                if (userRole == null)
+                    return StatusCode(500, "CEO role does not exist. Please create it first.");
+
+                var user = new User
+                {
+                    UserName = request.Email,
+                    Email = request.Email,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    RoleID = userRole.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user, request.Password);
+                if (!result.Succeeded)
+                    return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+                await _userManager.AddToRoleAsync(user, "CEO");
+                return Ok(new { message = "User registered successfully and assigned as CEO." });
+            }
         }
-
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -113,8 +150,8 @@ namespace ProjectManagmentTool.Controllers
         public string Password { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
+        public string? InviteCode { get; set; } // ✅ Fixed missing InviteCode
     }
-
 
     public class LoginRequest
     {

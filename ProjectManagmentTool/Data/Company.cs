@@ -1,13 +1,22 @@
-﻿using ProjectManagmentTool.Data;
+﻿using System;
+using System.Collections.Generic;
 
-public class Company
+namespace ProjectManagmentTool.Data
 {
-    public int CompanyID { get; set; }
-    public string CompanyName { get; set; }
-    public string Industry { get; set; }
-    public string CEOID { get; set; }  // Change from int to string
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public class Company
+    {
+        public int CompanyID { get; set; }
+        public string CompanyName { get; set; }
+        // This property stores the User Id of the CEO.
+        public string CEOID { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public int IndustryId { get; set; }
+        public Industry Industry { get; set; }
 
-    public User CEO { get; set; }
+        // One-to-many: all users belonging to this company.
+        public ICollection<User> Users { get; set; }
+        // One-to-one: the designated CEO.
+        public User CEO { get; set; }
+    }
 }

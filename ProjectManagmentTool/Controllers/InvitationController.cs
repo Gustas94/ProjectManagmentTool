@@ -23,30 +23,30 @@ namespace ProjectManagmentTool.Controllers
             _userManager = userManager;
         }
 
-        // ✅ Generate an invitation link
+        // ✅ Generate an invitation
         [HttpPost("create")]
         [Authorize]
-        public async Task<IActionResult> CreateInvitation()
+        public async Task<IActionResult> CreateInvitation([FromBody] CreateInvitationRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await _context.Users.FindAsync(userId);
             if (user == null || user.CompanyID == null)
                 return Unauthorized("You must be part of a company to create invitations.");
 
-            var invitation = new Invitation
+            var invite = new Invitation
             {
-                InvitationLink = Guid.NewGuid().ToString(),
+                InviteCode = Guid.NewGuid().ToString(), // ✅ Unique code
                 CompanyID = user.CompanyID.Value,
-                Email = null,  // ✅ No email required
-                RoleID = null,  // ✅ Default role will be assigned
+                Email = request.Email,
+                RoleID = request.RoleID,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(7)
+                ExpiresAt = DateTime.UtcNow.AddDays(7) // ✅ Expiry in 7 days
             };
 
-            _context.Invitations.Add(invitation);
+            _context.Invitations.Add(invite);
             await _context.SaveChangesAsync();
 
-            return Ok(new { link = $"http://localhost:5173/register?invite={invitation.InvitationLink}" });
+            return Ok(new { invite.InviteCode, invite.InvitationLink });
         }
 
         // ✅ Accept an invitation and register the user
@@ -54,17 +54,16 @@ namespace ProjectManagmentTool.Controllers
         public async Task<IActionResult> AcceptInvitation([FromBody] AcceptInvitationRequest request)
         {
             var invitation = await _context.Invitations
-                .FirstOrDefaultAsync(i => i.InvitationLink == request.InviteCode);
+                .FirstOrDefaultAsync(i => i.InviteCode == request.InviteCode);
 
             if (invitation == null || invitation.ExpiresAt < DateTime.UtcNow)
-                return BadRequest("Invalid or expired invitation.");
+                return BadRequest(new { message = "Invalid or expired invitation." });
 
             var userExists = await _userManager.FindByEmailAsync(request.Email);
             if (userExists != null)
-                return BadRequest("Email is already registered.");
+                return BadRequest(new { message = "Email is already registered." });
 
-            // ✅ Default Role ID
-            string defaultRoleId = "B134B12E-EFDA-48D4-B5F6-25CFFB4DD911";
+            string defaultRoleId = "B134B12E-EFDA-48D4-B5F6-25CFFB4DD911"; // ✅ Default role
 
             var newUser = new User
             {
@@ -72,38 +71,42 @@ namespace ProjectManagmentTool.Controllers
                 Email = request.Email,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                CompanyID = invitation.CompanyID, // ✅ Assign company from invitation
-                RoleID = invitation.RoleID ?? defaultRoleId, // ✅ Default to USER role
+                CompanyID = invitation.CompanyID, // ✅ Assign company from invite
+                RoleID = invitation.RoleID ?? defaultRoleId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
             var result = await _userManager.CreateAsync(newUser, request.Password);
             if (!result.Succeeded)
-                return BadRequest(result.Errors);
+                return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
 
-            _context.Invitations.Remove(invitation); // ✅ Delete the invitation after use
+            _context.Invitations.Remove(invitation); // ✅ Delete invitation after use
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Registration successful! You are now part of the company." });
         }
 
-        // ✅ Get details of an invitation (before user registers)
-        [HttpGet("{inviteCode}")]
-        public async Task<IActionResult> GetInvitation(string inviteCode)
+        // ✅ Validate an invitation before user registers
+        [HttpGet("validate")]
+        public async Task<IActionResult> ValidateInvitation([FromQuery] string inviteCode)
         {
             var invitation = await _context.Invitations
-                .Where(i => i.InvitationLink == inviteCode && i.ExpiresAt > DateTime.UtcNow)
+                .Where(i => i.InviteCode == inviteCode && i.ExpiresAt > DateTime.UtcNow)
                 .Select(i => new { i.CompanyID })
                 .FirstOrDefaultAsync();
 
             if (invitation == null)
-            {
-                return NotFound("Invalid or expired invitation link.");
-            }
+                return BadRequest(new { message = "Invalid or expired invitation." });
 
             return Ok(invitation);
         }
+    }
+
+    public class CreateInvitationRequest
+    {
+        public string? Email { get; set; }
+        public string? RoleID { get; set; }
     }
 
     public class AcceptInvitationRequest

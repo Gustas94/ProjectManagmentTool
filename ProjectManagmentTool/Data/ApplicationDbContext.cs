@@ -22,12 +22,32 @@ namespace ProjectManagmentTool.Data
         public DbSet<ProjectGroup> ProjectGroups { get; set; }
         public DbSet<GroupMember> GroupMembers { get; set; }
         public DbSet<TaskGroup> TaskGroups { get; set; }
+        public DbSet<Industry> Industries { get; set; }
 
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Remove any unique index on CompanyID so that multiple users can have the same CompanyID
+            modelBuilder.Entity<User>().HasIndex(u => u.CompanyID).IsUnique(false);
+
+            // Configure the one-to-many relationship: a company can have many users.
+            modelBuilder.Entity<Company>()
+                .HasMany(c => c.Users)
+                .WithOne(u => u.Company)
+                .HasForeignKey(u => u.CompanyID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure the one-to-one relationship for CEO:
+            // A company has one CEO, identified by CEOID, which references a User.
+            modelBuilder.Entity<Company>()
+                .HasOne(c => c.CEO)
+                .WithOne(u => u.CEOCompany)
+                .HasForeignKey<Company>(c => c.CEOID)
+                .OnDelete(DeleteBehavior.Restrict);
+
 
             // Configure RolePermission relationships
             modelBuilder.Entity<RolePermission>(entity =>
@@ -37,19 +57,12 @@ namespace ProjectManagmentTool.Data
                 entity.HasOne(rp => rp.Role)
                     .WithMany(r => r.RolePermissions)
                     .HasForeignKey(rp => rp.RoleID)
-                    .HasPrincipalKey(r => r.Id); // ✅ Use 'Id' instead of 'RoleID'
+                    .HasPrincipalKey(r => r.Id);
 
                 entity.HasOne(rp => rp.Permission)
                     .WithMany(p => p.RolePermissions)
                     .HasForeignKey(rp => rp.PermissionID);
             });
-
-            // Configure Company-CEO relationship
-            modelBuilder.Entity<Company>()
-                .HasOne(c => c.CEO)
-                .WithOne(u => u.Company)
-                .HasForeignKey<User>(u => u.CompanyID)
-                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure UserRole composite key
             modelBuilder.Entity<UserRole>()
@@ -97,7 +110,7 @@ namespace ProjectManagmentTool.Data
                 entity.HasOne(g => g.GroupLead)
                     .WithMany()
                     .HasForeignKey(g => g.GroupLeadID)
-                    .OnDelete(DeleteBehavior.NoAction); 
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             // Configure UserRole relationships
@@ -262,6 +275,33 @@ namespace ProjectManagmentTool.Data
                       .HasForeignKey(tg => tg.GroupID)
                       .OnDelete(DeleteBehavior.NoAction); // Disable cascade delete
             });
+
+            modelBuilder.Entity<Industry>().HasData(
+                        new Industry { IndustryId = 1, Name = "Medical" },
+                        new Industry { IndustryId = 2, Name = "Technology" },
+                        new Industry { IndustryId = 3, Name = "Software Development" },
+                        new Industry { IndustryId = 4, Name = "Finance" },
+                        new Industry { IndustryId = 5, Name = "Retail" },
+                        new Industry { IndustryId = 6, Name = "Education" },
+                        new Industry { IndustryId = 7, Name = "Hospitality" },
+                        new Industry { IndustryId = 8, Name = "Manufacturing" },
+                        new Industry { IndustryId = 9, Name = "Transportation" },
+                        new Industry { IndustryId = 10, Name = "Energy" },
+                        new Industry { IndustryId = 11, Name = "Agriculture" },
+                        new Industry { IndustryId = 12, Name = "Real Estate" },
+                        new Industry { IndustryId = 13, Name = "Entertainment" },
+                        new Industry { IndustryId = 14, Name = "Telecommunications" },
+                        new Industry { IndustryId = 15, Name = "Food & Beverage" },
+                        new Industry { IndustryId = 16, Name = "Sports" },
+                        new Industry { IndustryId = 17, Name = "Consulting" },
+                        new Industry { IndustryId = 18, Name = "Government" },
+                        new Industry { IndustryId = 19, Name = "Non-Profit" },
+                        new Industry
+                        {
+                            IndustryId = 20,
+                            Name = "Other"
+                        });
+
         }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectManagmentTool.Data;
 
@@ -11,9 +12,11 @@ using ProjectManagmentTool.Data;
 namespace ProjectManagmentTool.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250317152038_AddInviteCodeToInvitations")]
+    partial class AddInviteCodeToInvitations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -260,7 +263,7 @@ namespace ProjectManagmentTool.Migrations
 
                     b.Property<string>("CEOID")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
@@ -276,9 +279,6 @@ namespace ProjectManagmentTool.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("CompanyID");
-
-                    b.HasIndex("CEOID")
-                        .IsUnique();
 
                     b.HasIndex("IndustryId");
 
@@ -656,7 +656,9 @@ namespace ProjectManagmentTool.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CompanyID");
+                    b.HasIndex("CompanyID")
+                        .IsUnique()
+                        .HasFilter("[CompanyID] IS NOT NULL");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -879,19 +881,11 @@ namespace ProjectManagmentTool.Migrations
 
             modelBuilder.Entity("ProjectManagmentTool.Data.Company", b =>
                 {
-                    b.HasOne("ProjectManagmentTool.Data.User", "CEO")
-                        .WithOne("CEOCompany")
-                        .HasForeignKey("ProjectManagmentTool.Data.Company", "CEOID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("ProjectManagmentTool.Data.Industry", "Industry")
                         .WithMany()
                         .HasForeignKey("IndustryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("CEO");
 
                     b.Navigation("Industry");
                 });
@@ -1039,8 +1033,8 @@ namespace ProjectManagmentTool.Migrations
             modelBuilder.Entity("ProjectManagmentTool.Data.User", b =>
                 {
                     b.HasOne("ProjectManagmentTool.Data.Company", "Company")
-                        .WithMany("Users")
-                        .HasForeignKey("CompanyID")
+                        .WithOne("CEO")
+                        .HasForeignKey("ProjectManagmentTool.Data.User", "CompanyID")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ProjectManagmentTool.Data.Role", "Role")
@@ -1167,18 +1161,13 @@ namespace ProjectManagmentTool.Migrations
 
             modelBuilder.Entity("ProjectManagmentTool.Data.Company", b =>
                 {
-                    b.Navigation("Users");
+                    b.Navigation("CEO")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ProjectManagmentTool.Data.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
-                });
-
-            modelBuilder.Entity("ProjectManagmentTool.Data.User", b =>
-                {
-                    b.Navigation("CEOCompany")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("ProjectTask", b =>

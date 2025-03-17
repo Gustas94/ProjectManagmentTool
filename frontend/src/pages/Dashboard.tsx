@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 
 const Dashboard = () => {
   const [userInfo, setUserInfo] = useState({ firstName: "User", lastName: "", role: "Loading..." });
-  const [inviteLink, setInviteLink] = useState<string | null>(null);  // ✅ Stores generated link
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   // Fetch user data (name & role)
   useEffect(() => {
@@ -13,6 +13,7 @@ const Dashboard = () => {
         const response = await axios.get("/api/dashboard/user-info", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
         });
+        console.log("User info response:", response.data);
         setUserInfo(response.data);
       } catch (error) {
         console.error("Failed to fetch user info:", error);
@@ -21,13 +22,20 @@ const Dashboard = () => {
     fetchUserInfo();
   }, []);
 
-  // ✅ Function to Create Invitation
+  // Function to Create Invitation
   const createInvitation = async () => {
+    console.log("Create invitation button clicked");
     try {
-      const response = await axios.post("/api/invitations/create", {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-      });
-      setInviteLink(response.data.link);  // ✅ Update state with generated link
+      const response = await axios.post(
+        "/api/invitations/create",
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      console.log("Invitation response:", response.data);
+      // Update state with the invitation link returned by the API
+      setInviteLink(response.data.invitationLink);
     } catch (error) {
       console.error("Failed to create invitation:", error);
     }
@@ -40,15 +48,23 @@ const Dashboard = () => {
 
       {/* Invitation Section */}
       <div className="p-6">
-        <button className="bg-green-600 px-4 py-2 rounded mt-4" onClick={createInvitation}>
+        <button 
+          className="bg-green-600 px-4 py-2 rounded mt-4" 
+          onClick={createInvitation}
+        >
           ➕ Create Invitation Link
         </button>
 
-        {/* ✅ Show Generated Invitation Link */}
+        {/* Show Generated Invitation Link */}
         {inviteLink && (
           <div className="mt-4 bg-gray-800 p-4 rounded">
             <p className="text-white">📨 Invitation Link:</p>
-            <a href={inviteLink} className="text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer">
+            <a 
+              href={inviteLink} 
+              className="text-blue-400 hover:underline break-all" 
+              target="_blank" 
+              rel="noopener noreferrer"
+            >
               {inviteLink}
             </a>
           </div>

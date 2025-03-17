@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios, { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+interface Industry {
+    id: number;
+    name: string;
+}
+
 const CreateCompany = () => {
     const [companyName, setCompanyName] = useState('');
-    const [industry, setIndustry] = useState('');
+    const [industryId, setIndustryId] = useState<number>(0);
+    const [industryOptions, setIndustryOptions] = useState<Industry[]>([]);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,56 +23,90 @@ const CreateCompany = () => {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    useEffect(() => {
+        const fetchIndustries = async () => {
+            try {
+                const response = await axios.get('/api/industry');
+                setIndustryOptions(response.data);
+            } catch (error) {
+                console.error("Failed to fetch industries:", error);
+            }
+        };
+        fetchIndustries();
+    }, []);
+
     const handleCreateCompany = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (isSubmitting) return; // Prevent multiple clicks
-        setIsSubmitting(true);  // Disable further submissions
-    
+
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         setError('');
         setSuccess('');
-    
+
         if (password !== confirmPassword) {
             setError('Passwords do not match');
-            setIsSubmitting(false); // Allow retry
+            setIsSubmitting(false);
             return;
         }
-    
+        if (industryId === 0) {
+            setError('Please select an industry.');
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
-            // 🔹 Step 1: Register the CEO User
-            const userResponse = await axios.post('/api/auth/register', {
-                email,
-                password,
-                firstName,
-                lastName
-            });
-    
-            const userId = userResponse.data.userId; // Get CEO ID from API response
-    
-            // 🔹 Step 2: Create the Company with CEO ID
-            await axios.post('/api/company/create', {
+            const response = await axios.post('/api/company/create', {
                 companyName,
-                industry,
-                email, // CEO's email
+                industryId,
+                email,
                 firstName,
                 lastName,
                 password
             });
-    
+
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            }
             setSuccess('Company and CEO account created successfully!');
             navigate('/dashboard');
         } catch (err: unknown) {
-            const error = err as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
-            console.error("Error:", error.response);
-    
-            if (error.response?.data?.errors) {
-                const messages = Object.values(error.response.data.errors).flat().join(', ');
-                setError(messages);
-            } else {
-                setError(error.response?.data?.message || 'Failed to create company or user');
+            try {
+                const axiosError = err as AxiosError<{ message?: string; errors?: any }>;
+                let errorMessage = '';
+                if (axiosError.response?.data?.errors) {
+                    const errorsData = axiosError.response.data.errors;
+                    if (Array.isArray(errorsData)) {
+                        errorMessage = errorsData.join(', ');
+                    } else if (typeof errorsData === 'object') {
+                        for (const key in errorsData) {
+                            if (Object.prototype.hasOwnProperty.call(errorsData, key)) {
+                                const errorVal = errorsData[key];
+                                if (Array.isArray(errorVal)) {
+                                    if (key.toLowerCase().includes("password")) {
+                                        errorMessage += "Password error: " + errorVal.join(', ') + ". ";
+                                    } else if (key.toLowerCase().includes("email") || key.toLowerCase().includes("username")) {
+                                        errorMessage += "Account error: " + errorVal.join(', ') + ". ";
+                                    } else {
+                                        errorMessage += errorVal.join(', ') + ". ";
+                                    }
+                                } else {
+                                    errorMessage += errorVal + ". ";
+                                }
+                            }
+                        }
+                    }
+                } else if (axiosError.response?.data?.message) {
+                    errorMessage = axiosError.response.data.message;
+                } else {
+                    errorMessage = 'Failed to create company or user';
+                }
+                setError(errorMessage);
+            } catch (processingError) {
+                setError('An unexpected error occurred.');
             }
         } finally {
-            setIsSubmitting(false); // Allow retry after error
+            setIsSubmitting(false);
         }
     };
 
@@ -90,13 +130,18 @@ const CreateCompany = () => {
                     </div>
                     <div>
                         <label className="block text-gray-400 text-sm font-medium mb-1">Industry</label>
-                        <input
-                            type="text"
+                        <select
                             className="w-full p-3 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Enter industry"
-                            value={industry}
-                            onChange={(e) => setIndustry(e.target.value)}
-                        />
+                            value={industryId}
+                            onChange={(e) => setIndustryId(Number(e.target.value))}
+                        >
+                            <option value={0}>Select an industry</option>
+                            {industryOptions.map(option => (
+                                <option key={option.id} value={option.id}>
+                                    {option.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div>
                         <label className="block text-gray-400 text-sm font-medium mb-1">Email</label>
