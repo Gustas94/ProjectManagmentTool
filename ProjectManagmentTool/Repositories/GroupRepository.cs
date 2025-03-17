@@ -15,7 +15,16 @@
             _context = context;
         }
 
-        public async Task<List<Group>> GetAllGroupsByCompany(int? companyId)
+        public async Task<int?> GetCompanyIdByUserId(string userId)
+        {
+            var user = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.CompanyID)
+                .FirstOrDefaultAsync();
+            return user;
+        }
+
+        public async Task<List<Group>> GetAllGroupsByCompanyId(int? companyId) // 🔥 Fix: Correct method name
         {
             return await _context.Groups
                 .Where(g => g.CompanyID == companyId)
@@ -47,5 +56,4 @@
             await _context.SaveChangesAsync();
         }
     }
-
 }

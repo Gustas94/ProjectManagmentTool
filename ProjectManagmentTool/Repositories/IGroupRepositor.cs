@@ -6,11 +6,11 @@
 
     public interface IGroupRepository
     {
-        Task<List<Group>> GetAllGroupsByCompany(int? companyId);
+        Task<int?> GetCompanyIdByUserId(string userId);
+        Task<List<Group>> GetAllGroupsByCompanyId(int? companyId);
         Task<Group?> GetGroupById(int groupId);
         Task AddGroup(Group group);
         Task AddGroupMembers(List<GroupMember> groupMembers);
         Task SaveChangesAsync();
     }
-
 }

@@ -7,6 +7,7 @@ using ProjectManagmentTool.Repositories;
 using MediatR;
 using System.Reflection;
 using System.Text;
+using ProjectManagmentTool.Observers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +69,18 @@ builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 
 // Register MediatR (Automatically finds all handlers)
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+// Register ProjectRepository
+builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+
+// Use Scrutor to apply the Decorator Pattern
+builder.Services.Decorate<IProjectRepository, LoggingProjectRepositoryDecorator>();
+
+// Register Observer & Subject
+var taskSubject = new TaskSubject();
+taskSubject.Attach(new ConsoleTaskObserver()); // Attach observer
+
+builder.Services.AddSingleton(taskSubject); // Register as a Singleton
 
 var app = builder.Build();
 

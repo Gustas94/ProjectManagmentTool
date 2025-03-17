@@ -8,6 +8,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ProjectManagmentTool.Observers;
 
 namespace ProjectManagmentTool.Controllers
 {
@@ -18,11 +19,13 @@ namespace ProjectManagmentTool.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
+        private readonly TaskSubject _taskSubject;
 
-        public TaskController(ApplicationDbContext context, UserManager<User> userManager)
+        public TaskController(ApplicationDbContext context, UserManager<User> userManager, TaskSubject taskSubject)
         {
             _context = context;
             _userManager = userManager;
+            _taskSubject = taskSubject;
         }
 
         // Get all tasks for a project
@@ -90,7 +93,6 @@ namespace ProjectManagmentTool.Controllers
                 Description = request.Description,
                 Deadline = request.Deadline,
                 ProjectID = request.ProjectID,
-                // Remove direct GroupID usage since we use a join table now
                 Status = request.Status ?? "To Do",
                 Priority = request.Priority ?? "Medium",
                 CreatedAt = DateTime.UtcNow,
@@ -100,29 +102,11 @@ namespace ProjectManagmentTool.Controllers
             _context.Tasks.Add(task);
             await _context.SaveChangesAsync();
 
-            // Assign individual users
-            if (request.AssignedUserIDs != null)
-            {
-                foreach (var userId in request.AssignedUserIDs)
-                {
-                    _context.UserTasks.Add(new UserTask { UserID = userId, TaskID = task.TaskID });
-                }
-            }
-
-            // Assign groups via a join table (TaskGroup)
-            if (request.AssignedGroupIDs != null)
-            {
-                foreach (var groupId in request.AssignedGroupIDs)
-                {
-                    _context.TaskGroups.Add(new TaskGroup { TaskID = task.TaskID, GroupID = groupId });
-                }
-            }
-
-            await _context.SaveChangesAsync();
+            // Notify Observers
+            _taskSubject.Notify(task);
 
             return Ok(new { message = "Task created successfully", taskId = task.TaskID });
         }
-
         [HttpGet("{taskId}")]
         public async Task<IActionResult> GetTaskById(int taskId)
         {
@@ -213,6 +197,20 @@ namespace ProjectManagmentTool.Controllers
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Assignment updated successfully" });
+        }
+
+        [HttpPost("{taskId}/clone")]
+        public async Task<IActionResult> CloneTask(int taskId)
+        {
+            var existingTask = await _context.Tasks.FindAsync(taskId);
+            if (existingTask == null)
+                return NotFound("Task not found.");
+
+            var clonedTask = existingTask.Clone(); // Use Prototype Pattern
+            _context.Tasks.Add(clonedTask);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Task cloned successfully", clonedTaskId = clonedTask.TaskID });
         }
     }
 }

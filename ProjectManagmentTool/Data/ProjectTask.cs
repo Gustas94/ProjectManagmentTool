@@ -20,4 +20,19 @@ public class ProjectTask
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public ICollection<TaskGroup> TaskGroups { get; set; } = new List<TaskGroup>();
+
+    public ProjectTask Clone()
+    {
+        return new ProjectTask
+        {
+            TaskName = this.TaskName,
+            Description = this.Description,
+            Deadline = this.Deadline,
+            ProjectID = this.ProjectID,
+            Status = this.Status,
+            Priority = this.Priority,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
 }

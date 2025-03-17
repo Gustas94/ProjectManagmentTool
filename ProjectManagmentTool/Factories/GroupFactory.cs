@@ -1,7 +1,10 @@
 ﻿using ProjectManagmentTool.Data;
 
-namespace ProjectManagmentTool.Design_Patterns
+namespace ProjectManagmentTool.Factories
 {
+    using System;
+    using System.Collections.Generic;
+
     public static class GroupFactory
     {
         public static Group CreateGroup(string groupName, string description, string groupLeadID, int? companyID)
@@ -11,19 +14,21 @@ namespace ProjectManagmentTool.Design_Patterns
                 GroupName = groupName,
                 Description = description,
                 GroupLeadID = groupLeadID,
-                CompanyID = companyID, // Ensure correct type
+                CompanyID = companyID,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
         }
 
-        public static GroupMember CreateGroupMember(int groupId, string userId)
+        public static List<GroupMember> CreateGroupMembers(int groupId, List<string> memberIds)
         {
-            return new GroupMember
+            var members = new List<GroupMember>();
+            foreach (var memberId in memberIds)
             {
-                GroupID = groupId,
-                UserID = userId
-            };
+                members.Add(new GroupMember { GroupID = groupId, UserID = memberId });
+            }
+            return members;
         }
     }
 }
+
