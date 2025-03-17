@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ProjectManagmentTool.Design_Patterns;
 
 namespace ProjectManagmentTool.Controllers
 {
@@ -25,7 +26,20 @@ namespace ProjectManagmentTool.Controllers
         [HttpGet("all")]
         public async Task<IActionResult> GetAllGroups()
         {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+                return Unauthorized("User not found.");
+
+            var user = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => new { u.CompanyID })
+                .FirstOrDefaultAsync();
+
+            if (user == null || user.CompanyID == null)
+                return BadRequest("User's company could not be determined.");
+
             var groups = await _context.Groups
+                .Where(g => g.CompanyID == user.CompanyID)
                 .Select(g => new
                 {
                     g.GroupID,
@@ -33,12 +47,15 @@ namespace ProjectManagmentTool.Controllers
                     g.Description,
                     GroupLeadName = g.GroupLead != null ? g.GroupLead.FirstName + " " + g.GroupLead.LastName : "N/A",
                     g.CreatedAt,
-                    g.UpdatedAt
+                    g.UpdatedAt,
+                    g.CompanyID
                 })
                 .ToListAsync();
 
             return Ok(groups);
         }
+
+
 
         // POST: api/groups/create
         [HttpPost("create")]
@@ -53,27 +70,42 @@ namespace ProjectManagmentTool.Controllers
             if (string.IsNullOrEmpty(request.GroupLeadID))
                 return BadRequest("Group Lead must be selected.");
 
-            var group = new Group
-            {
-                GroupName = request.GroupName,
-                Description = request.Description,
-                GroupLeadID = request.GroupLeadID,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+                return Unauthorized("User not found.");
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null || user.CompanyID == null)
+                return BadRequest("User's company could not be determined.");
+
+            int? companyId = user.CompanyID;
+
+            // Use Factory Pattern to create a new Group
+            var group = GroupFactory.CreateGroup(request.GroupName, request.Description, request.GroupLeadID, companyId);
 
             _context.Groups.Add(group);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // Save group first so we can reference it in members
 
-            // Add group members
-            foreach (var userId in request.GroupMemberIDs)
+            // Check which members are already in this group to avoid duplicates
+            var existingMemberIds = await _context.GroupMembers
+                .Where(gm => gm.GroupID == group.GroupID)
+                .Select(gm => gm.UserID)
+                .ToListAsync();
+
+            var newMembers = request.GroupMemberIDs
+                .Where(memberId => !existingMemberIds.Contains(memberId)) // Prevent duplicates in this group
+                .Select(memberId => new GroupMember { GroupID = group.GroupID, UserID = memberId })
+                .ToList();
+
+            if (newMembers.Any())
             {
-                _context.GroupMembers.Add(new GroupMember { GroupID = group.GroupID, UserID = userId });
+                _context.GroupMembers.AddRange(newMembers);
+                await _context.SaveChangesAsync();
             }
-            await _context.SaveChangesAsync();
 
             return Ok(new { message = "Group created successfully", groupID = group.GroupID });
         }
+
 
         // GET: api/groups/{groupId}
         [HttpGet("{groupId}")]

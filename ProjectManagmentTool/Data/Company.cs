@@ -18,5 +18,7 @@ namespace ProjectManagmentTool.Data
         public ICollection<User> Users { get; set; }
         // One-to-one: the designated CEO.
         public User CEO { get; set; }
+
+        public ICollection<Group> Groups { get; set; } = new List<Group>();
     }
 }

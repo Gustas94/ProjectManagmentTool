@@ -10,6 +10,7 @@ interface Group {
   groupLeadName: string;
   createdAt: string;
   updatedAt: string;
+  companyID: number;
 }
 
 interface CompanyUser {
@@ -44,9 +45,10 @@ const Groups = () => {
         const response = await axios.get("http://localhost:5045/api/users/me", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
         });
+        console.log("User info response:", response.data); // ✅ Debug log
         setUserInfo(response.data);
-
-        // Now fetch company users using the companyID from user info
+  
+        // Fetch company users once userInfo is set
         if (response.data.companyID) {
           const compResponse = await axios.get(
             `http://localhost:5045/api/users/company/${response.data.companyID}`,
@@ -58,21 +60,32 @@ const Groups = () => {
         console.error("Failed to fetch user info or company users:", error);
       }
     };
-
-    const fetchGroups = async () => {
-      try {
-        const response = await axios.get("http://localhost:5045/api/groups/all", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-        });
-        setGroups(response.data);
-      } catch (error) {
-        console.error("Error fetching groups:", error);
-      }
-    };
-
+  
     fetchUserInfo();
-    fetchGroups();
   }, []);
+  
+  useEffect(() => {
+    if (userInfo.companyID) {
+      const fetchGroups = async () => {
+        try {
+          const response = await axios.get(`http://localhost:5045/api/groups/all`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
+  
+          // 🔥 FIX: Ensure `userInfo.companyID` is available
+          console.log("Fetching groups for company:", userInfo.companyID);
+          const filteredGroups = response.data.filter((group: Group) => group.companyID === userInfo.companyID);
+  
+          setGroups(filteredGroups);
+        } catch (error) {
+          console.error("Error fetching groups:", error);
+        }
+      };
+  
+      fetchGroups();
+    }
+  }, [userInfo.companyID]); // 🔥 FIX: Run fetchGroups only when `userInfo.companyID` changes
+  
 
   const toggleMemberSelection = (userId: string) => {
     setNewGroup((prev) => {
@@ -106,15 +119,16 @@ const Groups = () => {
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       // Update groups list with the new group (you might want to refetch instead)
-      setGroups([...groups, { 
-        groupID: response.data.groupID, 
-        groupName: newGroup.groupName, 
-        description: newGroup.description, 
+      setGroups([...groups, {
+        groupID: response.data.groupID,
+        groupName: newGroup.groupName,
+        description: newGroup.description,
         groupLeadName: companyUsers.find(u => u.id === newGroup.groupLeadID)
           ? companyUsers.find(u => u.id === newGroup.groupLeadID)!.firstName + " " + companyUsers.find(u => u.id === newGroup.groupLeadID)!.lastName
           : "",
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        companyID: userInfo.companyID
       }]);
       // Reset the modal state
       setNewGroup({ groupName: "", description: "", groupLeadID: "", groupMemberIDs: [] });

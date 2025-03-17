@@ -7,25 +7,16 @@ public class Group
     public string GroupName { get; set; }
     public string Description { get; set; }
     public string GroupLeadID { get; set; }
+    public int? CompanyID { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-
+    public Company Company { get; set; }
     public User GroupLead { get; set; }
-
-    // Reference to the project this group belongs to
     public int? ProjectID { get; set; }
     [ForeignKey("ProjectID")]
     public Project Project { get; set; }
-
-    // Many-to-Many Relationship (Projects ↔ Groups)
     public ICollection<ProjectGroup> ProjectGroups { get; set; } = new List<ProjectGroup>();
-
-    // Many-to-Many Relationship (Groups ↔ Users)
     public ICollection<GroupMember> GroupMembers { get; set; } = new List<GroupMember>();
-
-    // Tasks associated with this group
-    public ICollection<ProjectTask> Tasks { get; set; } = new List<ProjectTask>(); // Add this line
-
-    // Navigation property for TaskGroups
+    public ICollection<ProjectTask> Tasks { get; set; } = new List<ProjectTask>();
     public ICollection<TaskGroup> TaskGroups { get; set; } = new List<TaskGroup>();
 }

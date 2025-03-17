@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ProjectManagmentTool.Data;
+using ProjectManagmentTool.Repositories;
+using MediatR;
+using System.Reflection;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,8 +51,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
-// Corrected CORS Policy
+// Register CORS Policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -61,8 +63,15 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Register Repository (Dependency Injection)
+builder.Services.AddScoped<IGroupRepository, GroupRepository>();
+
+// Register MediatR (Automatically finds all handlers)
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
 var app = builder.Build();
 
+// Ensure CEO Role Exists on Startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

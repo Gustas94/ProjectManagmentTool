@@ -41,7 +41,8 @@ namespace ProjectManagmentTool.Controllers
             {
                 firstName = user.FirstName,
                 lastName = user.LastName,
-                role = user.Role != null ? user.Role.Name : "Unknown"
+                role = user.Role != null ? user.Role.Name : "Unknown",
+                companyID = user.CompanyID
             });
         }
     }

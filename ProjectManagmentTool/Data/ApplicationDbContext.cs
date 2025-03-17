@@ -103,15 +103,19 @@ namespace ProjectManagmentTool.Data
                     .OnDelete(DeleteBehavior.NoAction); // Prevents cascading delete
             });
 
-
-            // Configure Group relationships
             modelBuilder.Entity<Group>(entity =>
             {
                 entity.HasOne(g => g.GroupLead)
-                    .WithMany()
-                    .HasForeignKey(g => g.GroupLeadID)
-                    .OnDelete(DeleteBehavior.NoAction);
+                      .WithMany()
+                      .HasForeignKey(g => g.GroupLeadID)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(g => g.Company)
+                      .WithMany(c => c.Groups)
+                      .HasForeignKey(g => g.CompanyID)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
+
 
             // Configure UserRole relationships
             modelBuilder.Entity<UserRole>(entity =>
@@ -301,7 +305,6 @@ namespace ProjectManagmentTool.Data
                             IndustryId = 20,
                             Name = "Other"
                         });
-
         }
     }
 }
