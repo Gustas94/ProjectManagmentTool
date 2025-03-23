@@ -25,12 +25,12 @@
 |   |   |   +---DesignTimeBuild
 |   |   |   |   .dtbcache.v2
 |   |   |   +---FileContentIndex
-|   |   |   |   15f8b8ee-f7e2-458e-b8e2-aa1e0dc95263.vsidx
-|   |   |   |   43d82d58-97e8-44f0-8613-eccb5b7e5738.vsidx
-|   |   |   |   8240f7d5-7b15-44cb-ae30-b905e2870304.vsidx
-|   |   |   |   93fc16e6-4d35-4306-aa36-0bf9289fd1e3.vsidx
-|   |   |   |   a9d6d4bb-17b6-463d-a196-d9715b4c60b6.vsidx
-|   |   |   |   b4489c6a-7853-47d4-ac33-0b9de58a13a6.vsidx
+|   |   |   |   02554ce3-183d-4a68-ac10-209bdad0bd78.vsidx
+|   |   |   |   1f727c57-3190-4339-96cb-5cc401702fdf.vsidx
+|   |   |   |   4d61fa29-1551-42d8-9723-99b997a28858.vsidx
+|   |   |   |   6857d9d2-a23b-47d3-bf49-302170b24253.vsidx
+|   |   |   |   eea498e2-2c10-4a70-96b5-fe7878fe6d6e.vsidx
+|   |   |   |   f4f2ea57-ec9e-4c1f-8152-862b7d293a8b.vsidx
 |   |   |   +---v17
 |   |   |   |   .futdcache.v2
 |   |   |   |   .suo
@@ -190,6 +190,8 @@
 |   |   |   |   |   Azure.Core.dll
 |   |   |   |   |   Azure.Identity.dll
 |   |   |   |   |   Humanizer.dll
+|   |   |   |   |   MediatR.Contracts.dll
+|   |   |   |   |   MediatR.dll
 |   |   |   |   |   Microsoft.AspNetCore.Authentication.JwtBearer.dll
 |   |   |   |   |   Microsoft.AspNetCore.Cryptography.Internal.dll
 |   |   |   |   |   Microsoft.AspNetCore.Cryptography.KeyDerivation.dll
@@ -238,6 +240,7 @@
 |   |   |   |   |   ProjectManagmentTool.pdb
 |   |   |   |   |   ProjectManagmentTool.runtimeconfig.json
 |   |   |   |   |   ProjectManagmentTool.staticwebassets.endpoints.json
+|   |   |   |   |   Scrutor.dll
 |   |   |   |   |   Swashbuckle.AspNetCore.Swagger.dll
 |   |   |   |   |   Swashbuckle.AspNetCore.SwaggerGen.dll
 |   |   |   |   |   Swashbuckle.AspNetCore.SwaggerUI.dll
@@ -261,6 +264,9 @@
 |   |   |   |   |   System.Text.Encodings.Web.dll
 |   |   |   |   |   System.Text.Json.dll
 |   |   |   |   |   System.Windows.Extensions.dll
+|   |   +---Commands
+|   |   |   AssignGroupMembersCommand.cs
+|   |   |   CreateGroupCommand.cs
 |   |   +---Controllers
 |   |   |   AuthController.cs
 |   |   |   CompanyController.cs
@@ -298,6 +304,21 @@
 |   |   |   UserTask.cs
 |   |   +---DTOs
 |   |   |   AddUserToProjectRequest.cs
+|   |   |   AssignMembersDTO.cs
+|   |   |   AssignMembersRequestDTO.cs
+|   |   |   GroupDetailsDTO.cs
+|   |   |   GroupRequestDTO.cs
+|   |   |   TaskDTO.cs
+|   |   |   UserDTO.cs
+|   |   +---Factories
+|   |   |   GroupFactory.cs
+|   |   +---Handlers
+|   |   |   AssignGroupMembersHandler .cs
+|   |   |   CreateGroupHandler.cs
+|   |   |   GetAllGroupsHandler.cs
+|   |   |   GetCompanyIdHandler.cs
+|   |   |   GetGroupByIdHandler.cs
+|   |   |   GetGroupDetailsHandler.cs
 |   |   +---Migrations
 |   |   |   20250207141049_InitialCreate.cs
 |   |   |   20250207141049_InitialCreate.Designer.cs
@@ -388,8 +409,24 @@
 |   |   |   ProjectManagmentTool.csproj.nuget.dgspec.json
 |   |   |   ProjectManagmentTool.csproj.nuget.g.props
 |   |   |   ProjectManagmentTool.csproj.nuget.g.targets
+|   |   +---Observers
+|   |   |   ConsoleTaskObserver.cs
+|   |   |   ITaskObserver.cs
+|   |   |   TaskSubject.cs
 |   |   +---Properties
 |   |   |   launchSettings.json
+|   |   +---Queries
+|   |   |   GetAllGroupsHandler.cs
+|   |   |   GetAllGroupsQuery.cs
+|   |   |   GetCompanyIdQuery.cs
+|   |   |   GetGroupByIdQuery.cs
+|   |   |   GetGroupDetailsQuery.cs
+|   |   +---Repositories
+|   |   |   GroupRepository.cs
+|   |   |   IGroupRepositor.cs
+|   |   |   IProjectRepository.cs
+|   |   |   LoggingProjectRepositoryDecorator.cs
+|   |   |   ProjectRepository.cs
 |   |   appsettings.Development.json
 |   |   appsettings.json
 |   |   Program.cs

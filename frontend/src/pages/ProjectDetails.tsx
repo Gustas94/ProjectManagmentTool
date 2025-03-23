@@ -4,7 +4,6 @@ import axios /*, { AxiosError } */ from "axios"; // Remove AxiosError if unused
 import Navbar from "../components/Navbar";
 import GroupsTab from "../components/GroupsTab";
 import TaskTab from "../components/TaskTab";
-import MembersTab from "../components/MembersTab";
 
 // ================================
 // TypeScript Interfaces
@@ -23,6 +22,7 @@ interface Member {
   id: string;
   firstName: string;
   lastName: string;
+  assignedVia: string[];
 }
 
 // ================================
@@ -39,11 +39,12 @@ const ProjectDetails = () => {
   const [companyUsers, setCompanyUsers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // For "Add Members" modal in Members tab:
-  const [showMembersModal, setShowMembersModal] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [currentMembersPage, setCurrentMembersPage] = useState<number>(1);
-  const membersPerPage = 20;
+  // For modal toggle
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  // Members loading state
+  const [membersLoading] = useState(false);
+  // Selected members for assignment
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchProjectDetails = async () => {
@@ -114,6 +115,33 @@ const ProjectDetails = () => {
     ]).then(() => setLoading(false));
   }, [validProjectId, navigate]);
 
+  const assignMembers = async () => {
+    try {
+      await Promise.all(
+        selectedMembers.map((userId) =>
+          axios.post(
+            "http://localhost:5045/api/users/project/add",
+            { userID: userId, projectID: parseInt(validProjectId, 10) },
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          )
+        )
+      );
+      alert("Members assigned successfully!");
+      setSelectedMembers([]);
+      setShowAssignModal(false);
+
+      // Refresh members
+      const refreshed = await axios.get(
+        `http://localhost:5045/api/users/project/${validProjectId}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+      setMembers(refreshed.data);
+    } catch (err) {
+      console.error("Error assigning members", err);
+      alert("Failed to assign members.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -179,39 +207,103 @@ const ProjectDetails = () => {
         )}
         {activeTab === "groups" && (
           // Render the GroupsTab component and pass the current project ID.
-          <GroupsTab projectId={validProjectId} />
-        )}
-        {activeTab === "members" && (
-          <MembersTab
-            members={members}
-            companyUsers={companyUsers}
-            selectedUsers={selectedUsers}
-            setSelectedUsers={setSelectedUsers}
-            currentMembersPage={currentMembersPage}
-            setCurrentMembersPage={setCurrentMembersPage}
-            membersPerPage={membersPerPage}
-            handleAddUsersToProject={async () => {
-              try {
-                await Promise.all(
-                  selectedUsers.map((userId: string) =>
-                    axios.post(
-                      "http://localhost:5045/api/users/project/add",
-                      { userID: userId, projectID: parseInt(validProjectId, 10) },
-                      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-                    )
-                  )
-                );
-                setShowMembersModal(false);
-                setSelectedUsers([]);
-                window.location.reload();
-              } catch (error) {
-                console.error("Error adding users to project:", error);
-              }
+          <GroupsTab
+            projectId={validProjectId}
+            onGroupChange={() => {
+              // Refresh members when a group is removed
+              axios
+                .get(`http://localhost:5045/api/users/project/${validProjectId}`, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                })
+                .then((res) => setMembers(res.data))
+                .catch((err) => console.error("Error refreshing members:", err));
             }}
-            showMembersModal={showMembersModal}
-            setShowMembersModal={setShowMembersModal}
           />
         )}
+        {activeTab === "members" && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">Group Members</h3>
+              <button
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+                onClick={() => setShowAssignModal(true)}
+              >
+                ➕ Assign Members
+              </button>
+            </div>
+
+            {membersLoading ? (
+              <p>Loading members...</p>
+            ) : members.length === 0 ? (
+              <p className="text-gray-400">No members assigned to this group.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="bg-gray-700 p-3 rounded shadow text-white border border-gray-600"
+                  >
+                    <p className="font-medium">
+                      {member.firstName} {member.lastName}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      {member.assignedVia.length > 0
+                        ? member.assignedVia.join(", ")
+                        : "Direct"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Modal */}
+            {showAssignModal && (
+              <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+                <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-600">
+                  <h2 className="text-xl font-bold text-white mb-4">Assign New Members</h2>
+                  <div className="max-h-60 overflow-y-auto grid grid-cols-1 gap-2 text-white">
+                    {companyUsers
+                      .filter((user) => !members.some((m) => m.id === user.id))
+                      .map((user) => (
+                        <label key={user.id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            value={user.id}
+                            checked={selectedMembers.includes(user.id)}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setSelectedMembers((prev) =>
+                                isChecked
+                                  ? [...prev, user.id]
+                                  : prev.filter((id) => id !== user.id)
+                              );
+                            }}
+                          />
+                          {user.firstName} {user.lastName}
+                        </label>
+                      ))}
+                  </div>
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button
+                      className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded"
+                      onClick={() => setShowAssignModal(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+                      onClick={assignMembers}
+                      disabled={selectedMembers.length === 0}
+                    >
+                      Assign Selected
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

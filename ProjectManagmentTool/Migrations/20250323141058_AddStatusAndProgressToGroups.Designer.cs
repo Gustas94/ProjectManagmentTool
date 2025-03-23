@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectManagmentTool.Data;
 
@@ -11,9 +12,11 @@ using ProjectManagmentTool.Data;
 namespace ProjectManagmentTool.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250323141058_AddStatusAndProgressToGroups")]
+    partial class AddStatusAndProgressToGroups
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -698,12 +701,7 @@ namespace ProjectManagmentTool.Migrations
                     b.Property<int>("ProjectID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("GroupID")
-                        .HasColumnType("int");
-
                     b.HasKey("UserID", "ProjectID");
-
-                    b.HasIndex("GroupID");
 
                     b.HasIndex("ProjectID");
 
@@ -1087,10 +1085,6 @@ namespace ProjectManagmentTool.Migrations
 
             modelBuilder.Entity("ProjectManagmentTool.Data.UserProject", b =>
                 {
-                    b.HasOne("Group", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupID");
-
                     b.HasOne("Project", "Project")
                         .WithMany("UserProjects")
                         .HasForeignKey("ProjectID")
@@ -1102,8 +1096,6 @@ namespace ProjectManagmentTool.Migrations
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Group");
 
                     b.Navigation("Project");
 

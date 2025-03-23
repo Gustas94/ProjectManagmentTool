@@ -19,9 +19,10 @@ interface Group {
 
 interface GroupsTabProps {
   projectId: string;
+  onGroupChange?: () => void
 }
 
-const GroupsTab = ({ projectId }: GroupsTabProps) => {
+const GroupsTab = ({ projectId, onGroupChange }: GroupsTabProps) => {
   const [assignedGroups, setAssignedGroups] = useState<AssignedGroup[]>([]);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [selectedGroupID, setSelectedGroupID] = useState<number | null>(null);
@@ -84,6 +85,28 @@ const GroupsTab = ({ projectId }: GroupsTabProps) => {
     }
   };
 
+  const removeGroup = async (groupId: number) => {
+    const confirmRemove = confirm("Are you sure you want to remove this group from the project?");
+    if (!confirmRemove) return;
+
+    try {
+      await axios.delete(
+        `http://localhost:5045/api/projects/${projectId}/remove-group/${groupId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      await fetchAssignedGroups(); // refresh list
+      if (onGroupChange) onGroupChange(); // notify parent to refresh members
+    } catch (error) {
+      console.error("Error removing group:", error);
+      alert("Failed to remove group from project.");
+    }
+  };
+
+
   if (loading) {
     return <div>Loading groups...</div>;
   }
@@ -100,6 +123,12 @@ const GroupsTab = ({ projectId }: GroupsTabProps) => {
               <h3 className="font-bold">{group.groupName}</h3>
               <p className="text-sm text-gray-400">{group.description}</p>
               <p className="text-sm text-gray-400">Team Lead: {group.groupLeadName}</p>
+              <button
+                className="mt-2 text-red-400 hover:text-red-600 text-sm underline"
+                onClick={() => removeGroup(group.groupID)}
+              >
+                ❌ Remove Group
+              </button>
             </div>
           ))}
         </div>

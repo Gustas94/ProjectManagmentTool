@@ -84,24 +84,78 @@ namespace ProjectManagmentTool.Controllers
         }
 
         [HttpGet("project/{projectId}")]
-        public async Task<IActionResult> GetUsersByProject(int projectId)
+        public async Task<IActionResult> GetUsersForProject(int projectId)
         {
-            var users = await _context.ProjectUsers
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized();
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.ProjectID == projectId && p.CompanyID == user.CompanyID);
+
+            if (project == null)
+                return NotFound("Project not found or you don't have access.");
+
+            // 🟩 Direct assignments
+            var directAssignments = await _context.ProjectUsers
                 .Where(pu => pu.ProjectID == projectId)
-                .Select(pu => new
-                {
-                    pu.User.Id,
-                    pu.User.FirstName,
-                    pu.User.LastName
-                })
+                .Include(pu => pu.User)
                 .ToListAsync();
 
-            if (!users.Any())
+            var directUserMap = directAssignments
+                .ToDictionary(pu => pu.UserID, pu => pu.User);
+
+            // 🟩 Group-based assignments
+            var groupAssignments = await _context.ProjectGroups
+                .Where(pg => pg.ProjectID == projectId)
+                .SelectMany(pg => _context.GroupMembers
+                    .Where(gm => gm.GroupID == pg.GroupID)
+                    .Select(gm => new
+                    {
+                        gm.UserID,
+                        GroupName = _context.Groups
+                            .Where(g => g.GroupID == gm.GroupID)
+                            .Select(g => g.GroupName)
+                            .FirstOrDefault(),
+                        User = gm.User
+                    }))
+                .ToListAsync();
+
+            // 🟩 Merge all users
+            var merged = new Dictionary<string, (User user, List<string> sources)>();
+
+            // Add group users first
+            foreach (var g in groupAssignments)
             {
-                return NotFound("No members found for this project.");
+                if (!merged.ContainsKey(g.UserID))
+                    merged[g.UserID] = (g.User, new List<string>());
+
+                merged[g.UserID].sources.Add(g.GroupName);
             }
 
-            return Ok(users);
+            // Add direct users and mark as "Direct"
+            foreach (var kvp in directUserMap)
+            {
+                if (!merged.ContainsKey(kvp.Key))
+                    merged[kvp.Key] = (kvp.Value, new List<string>());
+
+                if (!merged[kvp.Key].sources.Any(s => s == "Direct"))
+                    merged[kvp.Key].sources.Add("Direct");
+            }
+
+            var result = merged.Select(kvp => new
+            {
+                id = kvp.Value.user.Id,
+                firstName = kvp.Value.user.FirstName,
+                lastName = kvp.Value.user.LastName,
+                assignedVia = kvp.Value.sources.Distinct().ToList()
+            }).ToList();
+
+            return Ok(result);
         }
 
         [HttpPost("project/add")]

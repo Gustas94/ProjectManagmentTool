@@ -72,7 +72,7 @@ const Groups = () => {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
           });
   
-          // 🔥 FIX: Ensure `userInfo.companyID` is available
+          // FIX: Ensure `userInfo.companyID` is available
           console.log("Fetching groups for company:", userInfo.companyID);
           const filteredGroups = response.data.filter((group: Group) => group.companyID === userInfo.companyID);
   
@@ -84,7 +84,7 @@ const Groups = () => {
   
       fetchGroups();
     }
-  }, [userInfo.companyID]); // 🔥 FIX: Run fetchGroups only when `userInfo.companyID` changes
+  }, [userInfo.companyID]); // FIX: Run fetchGroups only when `userInfo.companyID` changes
   
 
   const toggleMemberSelection = (userId: string) => {

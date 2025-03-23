@@ -196,17 +196,110 @@ namespace ProjectManagmentTool.Controllers
             if (alreadyAssigned)
                 return BadRequest("Group is already assigned to this project.");
 
+            // 1. Assign the group to the project
             var projectGroup = new ProjectGroup
             {
                 ProjectID = projectId,
                 GroupID = request.GroupID
             };
-
             _context.ProjectGroups.Add(projectGroup);
+
+            // 2. Fetch group members
+            var groupMemberUserIds = await _context.GroupMembers
+                .Where(gm => gm.GroupID == request.GroupID)
+                .Select(gm => gm.UserID)
+                .ToListAsync();
+
+            // 3. Fetch existing project users
+            var existingUserProjects = await _context.UserProjects
+                .Where(up => up.ProjectID == projectId && groupMemberUserIds.Contains(up.UserID))
+                .ToListAsync();
+
+            var existingUserIds = existingUserProjects.Select(up => up.UserID).ToHashSet();
+
+            // 4. Add new user-project entries for members not already in the project
+            var newUserProjects = groupMemberUserIds
+                .Where(userID => !existingUserIds.Contains(userID))
+                .Select(userID => new UserProject
+                {
+                    ProjectID = projectId,
+                    UserID = userID,
+                    GroupID = request.GroupID
+                })
+                .ToList();
+
+            _context.UserProjects.AddRange(newUserProjects);
+
+            // 5. Update existing entries (if any) to set the correct GroupID
+            foreach (var existingEntry in existingUserProjects)
+            {
+                if (existingEntry.GroupID != request.GroupID)
+                {
+                    existingEntry.GroupID = request.GroupID;
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Group assigned to project successfully." });
+            return Ok(new { message = "Group assigned to project successfully, including its members." });
         }
+
+        [HttpDelete("{projectId}/remove-group/{groupId}")]
+        public async Task<IActionResult> RemoveGroupFromProject(int projectId, int groupId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return NotFound();
+
+            var projectGroup = await _context.ProjectGroups
+                .FirstOrDefaultAsync(pg => pg.ProjectID == projectId && pg.GroupID == groupId);
+
+            if (projectGroup == null)
+                return NotFound("Group not assigned to project.");
+
+            _context.ProjectGroups.Remove(projectGroup);
+
+            // Remove users only assigned via this group
+            var groupMembers = await _context.GroupMembers
+                .Where(gm => gm.GroupID == groupId)
+                .Select(gm => gm.UserID)
+                .ToListAsync();
+
+            var usersToRemove = await _context.ProjectUsers
+                .Where(pu => pu.ProjectID == projectId && groupMembers.Contains(pu.UserID))
+                .ToListAsync();
+
+            foreach (var pu in usersToRemove)
+            {
+                bool isInOtherAssignedGroups = await _context.ProjectGroups
+                    .AnyAsync(pg =>
+                        pg.ProjectID == projectId &&
+                        _context.GroupMembers.Any(gm =>
+                            gm.GroupID == pg.GroupID &&
+                            gm.UserID == pu.UserID
+                        )
+                    );
+
+                bool isIndividuallyAssigned = await _context.ProjectUsers
+                    .AnyAsync(p =>
+                        p.ProjectID == projectId &&
+                        p.UserID == pu.UserID &&
+                        !_context.GroupMembers.Any(gm => gm.GroupID == groupId && gm.UserID == pu.UserID)
+                    );
+
+                if (!isInOtherAssignedGroups && !isIndividuallyAssigned)
+                {
+                    _context.ProjectUsers.Remove(pu);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Group and relevant users removed from project." });
+        }
+
+
 
         public class AssignGroupRequest
         {
