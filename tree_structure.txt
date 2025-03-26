@@ -25,11 +25,11 @@
 |   |   |   +---DesignTimeBuild
 |   |   |   |   .dtbcache.v2
 |   |   |   +---FileContentIndex
-|   |   |   |   02554ce3-183d-4a68-ac10-209bdad0bd78.vsidx
-|   |   |   |   1f727c57-3190-4339-96cb-5cc401702fdf.vsidx
-|   |   |   |   4d61fa29-1551-42d8-9723-99b997a28858.vsidx
-|   |   |   |   6857d9d2-a23b-47d3-bf49-302170b24253.vsidx
-|   |   |   |   eea498e2-2c10-4a70-96b5-fe7878fe6d6e.vsidx
+|   |   |   |   06f963f1-3661-436c-ad97-7c3689399cd5.vsidx
+|   |   |   |   4d3ebcaf-4da2-46a9-b365-0268c47d042a.vsidx
+|   |   |   |   517c4469-99fd-4f7e-943a-31d67eea7587.vsidx
+|   |   |   |   5f1aa7cf-726f-4430-bf93-b569415b59b7.vsidx
+|   |   |   |   a82c96c4-c8a3-42cd-b757-d97a862e74c4.vsidx
 |   |   |   |   f4f2ea57-ec9e-4c1f-8152-862b7d293a8b.vsidx
 |   |   |   +---v17
 |   |   |   |   .futdcache.v2
@@ -364,6 +364,10 @@
 |   |   |   20250317171954_FixCompanyIDInGroups.Designer.cs
 |   |   |   20250317174043_AddTimestampsToIndustries.cs
 |   |   |   20250317174043_AddTimestampsToIndustries.Designer.cs
+|   |   |   20250323141058_AddStatusAndProgressToGroups.cs
+|   |   |   20250323141058_AddStatusAndProgressToGroups.Designer.cs
+|   |   |   20250323144853_AddGroupIDToUserProject.cs
+|   |   |   20250323144853_AddGroupIDToUserProject.Designer.cs
 |   |   |   ApplicationDbContextModelSnapshot.cs
 |   |   +---Models
 |   |   +---obj

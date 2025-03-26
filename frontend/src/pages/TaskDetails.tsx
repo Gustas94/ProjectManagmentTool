@@ -35,6 +35,15 @@ interface Group {
     groupName: string;
 }
 
+// Combined type includes a flag if the user was assigned directly.
+type CombinedAssignedUser = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    groups: string[];
+    directly?: boolean;
+};
+
 const TaskDetails = () => {
     const navigate = useNavigate();
     const { taskId } = useParams<{ taskId: string }>();
@@ -45,14 +54,16 @@ const TaskDetails = () => {
     const [projectMembers, setProjectMembers] = useState<Member[]>([]);
     const [projectGroups, setProjectGroups] = useState<Group[]>([]);
 
-    // Selected for assignment
+    // Selected for assignment (used in modal)
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
     const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
 
     // Editable task fields
     const [taskName, setTaskName] = useState("");
+    const [description, setDescription] = useState("");
     const [deadline, setDeadline] = useState("");
     const [priority, setPriority] = useState("Medium");
+    const [status, setStatus] = useState("To Do");
 
     // Modal toggle
     const [showAssignModal, setShowAssignModal] = useState(false);
@@ -65,15 +76,14 @@ const TaskDetails = () => {
 
     const fetchTaskDetails = async (id: string) => {
         try {
-            const response = await axios.get(
-                `http://localhost:5045/api/tasks/${id}`,
-                {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                }
-            );
+            const response = await axios.get(`http://localhost:5045/api/tasks/${id}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            });
             const taskData = response.data;
             setTask(taskData);
             setTaskName(taskData.taskName);
+            setDescription(taskData.description);
+            setStatus(taskData.status);
 
             // Convert deadline to "YYYY-MM-DD"
             if (taskData.deadline) {
@@ -83,7 +93,6 @@ const TaskDetails = () => {
             } else {
                 setDeadline("");
             }
-
             setPriority(taskData.priority);
 
             if (taskData.projectID) {
@@ -101,12 +110,9 @@ const TaskDetails = () => {
 
     const fetchProjectMembers = async (projectId: number) => {
         try {
-            const response = await axios.get(
-                `http://localhost:5045/api/users/project/${projectId}`,
-                {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                }
-            );
+            const response = await axios.get(`http://localhost:5045/api/users/project/${projectId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            });
             setProjectMembers(response.data);
         } catch (error) {
             console.error("Error fetching project members:", error);
@@ -115,12 +121,9 @@ const TaskDetails = () => {
 
     const fetchProjectGroups = async (projectId: number) => {
         try {
-            const response = await axios.get(
-                `http://localhost:5045/api/projects/${projectId}/groups`,
-                {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                }
-            );
+            const response = await axios.get(`http://localhost:5045/api/projects/${projectId}/groups`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            });
             setProjectGroups(response.data);
         } catch (error) {
             console.error("Error fetching project groups:", error);
@@ -158,11 +161,35 @@ const TaskDetails = () => {
                     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                 }
             );
-            // Refresh
             fetchTaskDetails(taskId!);
+            setSelectedUsers([]);
+            setSelectedGroups([]);
             setShowAssignModal(false);
         } catch (error) {
             console.error("Error assigning users/groups:", error);
+        }
+    };
+
+    // Remove a direct user assignment (does not remove group-based assignment)
+    const removeUserFromTask = async (userId: string) => {
+        try {
+            await axios.delete(`http://localhost:5045/api/tasks/${taskId}/assign/user/${userId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            });
+            fetchTaskDetails(taskId!);
+        } catch (error) {
+            console.error("Error removing direct user assignment:", error);
+        }
+    };
+
+    const removeGroupFromTask = async (groupId: number) => {
+        try {
+            await axios.delete(`http://localhost:5045/api/tasks/${taskId}/assign/group/${groupId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            });
+            fetchTaskDetails(taskId!);
+        } catch (error) {
+            console.error("Error removing group from task:", error);
         }
     };
 
@@ -172,8 +199,13 @@ const TaskDetails = () => {
                 `http://localhost:5045/api/tasks/${taskId}`,
                 {
                     taskName,
+                    description,
                     deadline,
                     priority,
+                    status,
+                    projectID: task?.projectID,
+                    assignedUserIDs: task?.individualAssignedUsers?.map(user => user.id) || [],
+                    assignedGroupIDs: task?.assignedGroups?.map(group => group.groupID) || []
                 },
                 {
                     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -186,13 +218,15 @@ const TaskDetails = () => {
     };
 
     const deleteTask = async () => {
-        try {
-            await axios.delete(`http://localhost:5045/api/tasks/${taskId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            });
-            navigate("/projects");
-        } catch (error) {
-            console.error("Error deleting task:", error);
+        if (window.confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
+            try {
+                await axios.delete(`http://localhost:5045/api/tasks/${taskId}`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                });
+                navigate("/projects");
+            } catch (error) {
+                console.error("Error deleting task:", error);
+            }
         }
     };
 
@@ -212,128 +246,221 @@ const TaskDetails = () => {
         );
     }
 
+    // Build combined assigned users: those assigned directly (from individualAssignedUsers)
+    // are marked with directly=true. Then merge in groupAssignedUsers.
+    const combined: { [id: string]: CombinedAssignedUser } = {};
+    task.individualAssignedUsers.forEach(user => {
+        combined[user.id] = {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            groups: [],
+            directly: true
+        };
+    });
+    task.groupAssignedUsers.forEach(user => {
+        if (combined[user.id]) {
+            if (!combined[user.id].groups.includes(user.groupName)) {
+                combined[user.id].groups.push(user.groupName);
+            }
+        } else {
+            combined[user.id] = {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                groups: [user.groupName]
+            };
+        }
+    });
+    const combinedAssignedUsers: CombinedAssignedUser[] = Object.values(combined);
+
     return (
         <div className="min-h-screen bg-gray-900 text-white">
             <Navbar userInfo={{ firstName: "User", lastName: "", role: "Developer" }} />
 
-            {/* TOP SECTION */}
+            {/* Header Section */}
             <div className="p-6 bg-slate-800 border-b border-gray-700">
                 <h1 className="text-2xl font-bold">
                     {task.projectName} / {task.taskName}
                 </h1>
-
-                {/* Editable Fields */}
-                <div className="mt-4">
-                    <label className="block text-gray-300">Task Name</label>
-                    <input
-                        type="text"
-                        className="w-full p-2 bg-gray-700 text-white rounded"
-                        value={taskName}
-                        onChange={(e) => setTaskName(e.target.value)}
-                    />
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-gray-300">Task Name</label>
+                        <input
+                            type="text"
+                            className="w-full p-2 bg-gray-700 text-white rounded"
+                            value={taskName}
+                            onChange={(e) => setTaskName(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-gray-300">Deadline</label>
+                        <input
+                            type="date"
+                            className="w-full p-2 bg-gray-700 text-white rounded"
+                            value={deadline}
+                            onChange={(e) => setDeadline(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-gray-300">Priority</label>
+                        <select
+                            className="w-full p-2 bg-gray-700 text-white rounded"
+                            value={priority}
+                            onChange={(e) => setPriority(e.target.value)}
+                        >
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
                 </div>
-
-                <div className="mt-4">
-                    <label className="block text-gray-300">Deadline</label>
-                    <input
-                        type="date"
-                        className="w-full p-2 bg-gray-700 text-white rounded"
-                        value={deadline}
-                        onChange={(e) => setDeadline(e.target.value)}
-                    />
+                {/* New row for Description and Status */}
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-gray-300">Description</label>
+                        <textarea
+                            className="w-full p-2 bg-gray-700 text-white rounded resize-none"
+                            rows={3}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label className="block text-gray-300">Status</label>
+                        <select
+                            className="w-full p-2 bg-gray-700 text-white rounded"
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                        >
+                            <option value="To Do">To Do</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Testing">Testing</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
                 </div>
-
-                <div className="mt-4">
-                    <label className="block text-gray-300">Priority</label>
-                    <select
-                        className="w-full p-2 bg-gray-700 text-white rounded"
-                        value={priority}
-                        onChange={(e) => setPriority(e.target.value)}
-                    >
-                        <option value="High">High</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Low">Low</option>
-                    </select>
-                </div>
-
-                {/* Action Buttons */}
                 <div className="flex items-center space-x-2 mt-4">
-                    <button onClick={updateTask} className="bg-blue-600 px-4 py-2 rounded">
+                    <button onClick={updateTask} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
                         Update Task
                     </button>
-                    <button onClick={deleteTask} className="bg-red-600 px-4 py-2 rounded">
+                    <button onClick={deleteTask} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
                         Delete Task
                     </button>
-                    <button
-                        onClick={() => setShowAssignModal(true)}
-                        className="bg-green-600 px-4 py-2 rounded"
-                    >
+                    <button onClick={() => setShowAssignModal(true)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
                         ➕ Assign Members/Groups
                     </button>
                 </div>
             </div>
 
-            {/* BOTTOM SECTION: Display currently assigned users/groups */}
-            <div className="p-6">
-                <h3 className="text-xl font-bold">Assigned Users</h3>
-                <ul className="list-disc pl-5">
-                    {task.individualAssignedUsers.map(user => (
-                        <li key={user.id}>{user.firstName} {user.lastName}</li>
-                    ))}
-                    {task.groupAssignedUsers.map(user => (
-                        <li key={user.id}>
-                            {user.firstName} {user.lastName} ({user.groupName})
-                        </li>
-                    ))}
-                </ul>
-
-                <h3 className="text-xl font-bold mt-6">Assigned Groups</h3>
-                <ul className="list-disc pl-5">
-                    {task.assignedGroups.map(group => (
-                        <li key={group.groupID}>{group.groupName}</li>
-                    ))}
-                </ul>
+            {/* Assigned Users & Groups as Cards */}
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 className="text-xl font-bold mb-2">Assigned Users</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {combinedAssignedUsers.map((user) => {
+                            const labelParts: string[] = [];
+                            if (user.directly) {
+                                labelParts.push("Directly");
+                            }
+                            if (user.groups && user.groups.length > 0) {
+                                user.groups.forEach((group) => {
+                                    labelParts.push(`${group}`);
+                                });
+                            }
+                            const finalLabel = labelParts.join(", ");
+                            return (
+                                <div key={user.id} className="bg-gray-700 p-4 rounded shadow">
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-bold">
+                                            {user.firstName} {user.lastName}
+                                        </p>
+                                        {user.directly && (
+                                            <button
+                                                onClick={() => removeUserFromTask(user.id)}
+                                                className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs"
+                                            >
+                                                Remove Direct
+                                            </button>
+                                        )}
+                                    </div>
+                                    {labelParts.length > 0 && (
+                                        <p className="text-sm text-gray-300">({finalLabel})</p>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold mb-2">Assigned Groups</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {task.assignedGroups.map((group) => (
+                            <div key={group.groupID} className="bg-gray-700 p-4 rounded shadow flex justify-between items-center">
+                                <p className="font-bold">{group.groupName}</p>
+                                <button
+                                    onClick={() => removeGroupFromTask(group.groupID)}
+                                    className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            {/* Single Assign Modal Block */}
+            {/* Assignment Modal */}
             {showAssignModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-gray-800 p-6 rounded shadow-lg w-1/3">
-                        <h3 className="text-lg font-bold">Add Members to Project</h3>
-
-                        {/* Bottom section: Display assigned users/groups */}
-                        <div className="p-6">
-                            <h3 className="text-xl font-bold">Assigned Users</h3>
-                            <ul className="list-disc pl-5">
-                                {task.individualAssignedUsers.map(user => (
-                                    <li key={user.id}>{user.firstName} {user.lastName}</li>
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+                    <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-600">
+                        <h2 className="text-xl font-bold text-white mb-4">Assign Users & Groups</h2>
+                        <div className="mb-4">
+                            <h3 className="text-lg font-semibold text-white">Select Users</h3>
+                            <div className="max-h-40 overflow-y-auto mt-2 grid grid-cols-1 gap-2">
+                                {projectMembers.map((member) => (
+                                    <label key={member.id} className="flex items-center gap-2 bg-gray-700 p-2 rounded">
+                                        <input
+                                            type="checkbox"
+                                            value={member.id}
+                                            checked={selectedUsers.includes(member.id)}
+                                            onChange={handleUserCheckboxChange}
+                                        />
+                                        <span>
+                                            {member.firstName} {member.lastName}
+                                        </span>
+                                    </label>
                                 ))}
-                                {task.groupAssignedUsers.map(user => (
-                                    <li key={user.id}>{user.firstName} {user.lastName} ({user.groupName})</li>
-                                ))}
-                            </ul>
-
-                            <h3 className="text-xl font-bold mt-6">Assigned Groups</h3>
-                            <ul className="list-disc pl-5">
-                                {task.assignedGroups.map(group => (
-                                    <li key={group.groupID}>{group.groupName}</li>
-                                ))}
-                            </ul>
+                            </div>
                         </div>
-
-                        {/* Modal Buttons */}
-                        <div className="flex justify-end mt-4">
-                            <button
-                                onClick={assignUsersAndGroups}
-                                className="bg-green-600 px-4 py-2 rounded mr-2"
-                            >
-                                Add Selected
-                            </button>
+                        <div className="mb-4">
+                            <h3 className="text-lg font-semibold text-white">Select Groups</h3>
+                            <div className="max-h-40 overflow-y-auto mt-2 grid grid-cols-1 gap-2">
+                                {projectGroups.map((group) => (
+                                    <label key={group.groupID} className="flex items-center gap-2 bg-gray-700 p-2 rounded">
+                                        <input
+                                            type="checkbox"
+                                            value={group.groupID}
+                                            checked={selectedGroups.includes(group.groupID)}
+                                            onChange={handleGroupCheckboxChange}
+                                        />
+                                        <span>{group.groupName}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
                             <button
                                 onClick={() => setShowAssignModal(false)}
-                                className="bg-red-600 px-4 py-2 rounded"
+                                className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded"
                             >
                                 Cancel
+                            </button>
+                            <button
+                                onClick={assignUsersAndGroups}
+                                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+                            >
+                                Add Selected
                             </button>
                         </div>
                     </div>

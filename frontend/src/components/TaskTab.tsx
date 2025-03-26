@@ -215,6 +215,38 @@ const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
                             </select>
                         </div>
 
+                        {/* Description Field */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold mb-1 text-gray-200">
+                                Description
+                            </label>
+                            <textarea
+                                className="w-full p-2 rounded bg-gray-700 text-white focus:outline-none"
+                                rows={3}
+                                value={newTask.description}
+                                onChange={(e) =>
+                                    setNewTask({ ...newTask, description: e.target.value })
+                                }
+                            />
+                        </div>
+
+                        {/* Status Field */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold mb-1 text-gray-200">
+                                Status
+                            </label>
+                            <select
+                                className="w-full p-2 rounded bg-gray-700 text-white focus:outline-none"
+                                value={newTask.status}
+                                onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                            >
+                                <option value="To Do">To Do</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Testing">Testing</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+
                         {/* Two-column layout for Individual Members and Groups */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Individual Members */}

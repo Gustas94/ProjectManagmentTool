@@ -106,7 +106,6 @@ const GroupsTab = ({ projectId, onGroupChange }: GroupsTabProps) => {
     }
   };
 
-
   if (loading) {
     return <div>Loading groups...</div>;
   }

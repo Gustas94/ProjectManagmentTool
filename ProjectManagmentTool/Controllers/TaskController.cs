@@ -100,13 +100,85 @@ namespace ProjectManagmentTool.Controllers
             };
 
             _context.Tasks.Add(task);
+            await _context.SaveChangesAsync(); // Task.TaskID is now set
+
+            // Process individual user assignments
+            if (request.AssignedUserIDs != null)
+            {
+                foreach (var userId in request.AssignedUserIDs)
+                {
+                    if (!await _context.UserTasks.AnyAsync(ut => ut.TaskID == task.TaskID && ut.UserID == userId))
+                    {
+                        _context.UserTasks.Add(new UserTask { TaskID = task.TaskID, UserID = userId });
+                    }
+                }
+            }
+
+            // Process group assignments
+            if (request.AssignedGroupIDs != null)
+            {
+                foreach (var groupId in request.AssignedGroupIDs)
+                {
+                    if (!await _context.TaskGroups.AnyAsync(tg => tg.TaskID == task.TaskID && tg.GroupID == groupId))
+                    {
+                        _context.TaskGroups.Add(new TaskGroup { TaskID = task.TaskID, GroupID = groupId });
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            // Notify Observers
-            _taskSubject.Notify(task);
+            // Optionally, requery the task with join data so you can see the assigned users/groups immediately.
+            var createdTask = await _context.Tasks
+                .Where(t => t.TaskID == task.TaskID)
+                .Select(t => new
+                {
+                    t.TaskID,
+                    t.TaskName,
+                    t.Description,
+                    t.Deadline,
+                    t.Status,
+                    t.Priority,
+                    t.ProjectID,
+                    ProjectName = _context.Projects
+                                        .Where(p => p.ProjectID == t.ProjectID)
+                                        .Select(p => p.ProjectName)
+                                        .FirstOrDefault(),
+                    individualAssignedUsers = _context.UserTasks
+                        .Where(ut => ut.TaskID == t.TaskID)
+                        .Join(_context.Users,
+                              ut => ut.UserID,
+                              u => u.Id,
+                              (ut, u) => new { u.Id, u.FirstName, u.LastName })
+                        .ToList(),
+                    assignedGroups = _context.TaskGroups
+                        .Where(tg => tg.TaskID == t.TaskID)
+                        .Join(_context.Groups,
+                              tg => tg.GroupID,
+                              g => g.GroupID,
+                              (tg, g) => new { g.GroupID, g.GroupName })
+                        .ToList(),
+                    groupAssignedUsers = _context.TaskGroups
+                        .Where(tg => tg.TaskID == t.TaskID)
+                        .SelectMany(tg =>
+                            _context.GroupMembers
+                                .Where(gm => gm.GroupID == tg.GroupID)
+                                .Join(_context.Users,
+                                      gm => gm.UserID,
+                                      u => u.Id,
+                                      (gm, u) => new { u.Id, u.FirstName, u.LastName, GroupName = tg.Group.GroupName })
+                        )
+                        .Distinct()
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
 
-            return Ok(new { message = "Task created successfully", taskId = task.TaskID });
+            return Ok(new { message = "Task created successfully", task = createdTask });
         }
+
+
+
+
         [HttpGet("{taskId}")]
         public async Task<IActionResult> GetTaskById(int taskId)
         {
@@ -211,6 +283,76 @@ namespace ProjectManagmentTool.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Task cloned successfully", clonedTaskId = clonedTask.TaskID });
+        }
+
+        [HttpDelete("{taskId}/assign/group/{groupId}")]
+        public async Task<IActionResult> RemoveGroupAssignment(int taskId, int groupId)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null) return NotFound("Task not found.");
+
+            var taskGroup = await _context.TaskGroups.FirstOrDefaultAsync(tg => tg.TaskID == taskId && tg.GroupID == groupId);
+            if (taskGroup == null)
+                return NotFound("Group assignment not found.");
+
+            _context.TaskGroups.Remove(taskGroup);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Group removed successfully" });
+        }
+
+        [HttpDelete("{taskId}/assign/user/{userId}")]
+        public async Task<IActionResult> RemoveUserAssignment(int taskId, string userId)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+                return NotFound("Task not found.");
+
+            var userTask = await _context.UserTasks.FirstOrDefaultAsync(ut => ut.TaskID == taskId && ut.UserID == userId);
+            if (userTask == null)
+                return NotFound("Direct user assignment not found.");
+
+            _context.UserTasks.Remove(userTask);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Direct user assignment removed successfully" });
+        }
+
+        [HttpPut("{taskId}")]
+        public async Task<IActionResult> UpdateTask(int taskId, [FromBody] TaskRequestDTO request)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+                return NotFound("Task not found.");
+
+            task.TaskName = request.TaskName;
+            task.Description = request.Description;
+            task.Deadline = request.Deadline;
+            task.Priority = request.Priority ?? "Medium";
+            task.Status = request.Status ?? "To Do";
+            task.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Task updated successfully" });
+        }
+
+        [HttpDelete("{taskId}")]
+        public async Task<IActionResult> DeleteTask(int taskId)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+                return NotFound("Task not found.");
+
+            // Remove associated direct user assignments.
+            var userTasks = _context.UserTasks.Where(ut => ut.TaskID == taskId);
+            _context.UserTasks.RemoveRange(userTasks);
+
+            // Remove associated group assignments.
+            var taskGroups = _context.TaskGroups.Where(tg => tg.TaskID == taskId);
+            _context.TaskGroups.RemoveRange(taskGroups);
+
+            // Now remove the task itself.
+            _context.Tasks.Remove(task);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Task and all associated assignments deleted successfully" });
         }
     }
 }
