@@ -16,7 +16,6 @@ interface Project {
   updatedAt: string;
 }
 
-
 const Projects = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState({ firstName: "User", lastName: "", role: "Loading..." });
@@ -65,16 +64,16 @@ const Projects = () => {
       <Navbar userInfo={userInfo} />
 
       {/* Search, Filter & Create Project Button */}
-      <div className="p-4 bg-slate-800 border-b border-gray-700 flex justify-between items-center">
+      <div className="p-4 bg-slate-800 border-b border-gray-700 flex flex-wrap justify-between items-center gap-2">
         <input
           type="text"
           placeholder="Search projects..."
-          className="w-1/3 p-2 bg-gray-700 text-white rounded focus:outline-none"
+          className="w-full sm:w-1/3 p-2 bg-gray-700 text-white rounded focus:outline-none"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         <select
-          className="p-2 bg-gray-700 text-white rounded"
+          className="w-full sm:w-auto p-2 bg-gray-700 text-white rounded"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
@@ -83,14 +82,13 @@ const Projects = () => {
           <option value="private">Private</option>
         </select>
         <button
-          className="bg-gray-700 p-2 rounded hover:bg-gray-600"
+          className="w-full sm:w-auto bg-gray-700 p-2 rounded hover:bg-gray-600"
           onClick={() => setViewType(viewType === "grid" ? "list" : "grid")}
         >
           {viewType === "grid" ? "🔲 Grid View" : "📋 List View"}
         </button>
-        {/* Create Project Button */}
         <button
-          className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
+          className="w-full sm:w-auto bg-green-600 px-4 py-2 rounded hover:bg-green-700"
           onClick={() => navigate("/projects/create-project")}
         >
           ➕ Create Project
@@ -98,7 +96,7 @@ const Projects = () => {
       </div>
 
       {/* Project List/Grid View */}
-      <div className={`p-6 ${viewType === "grid" ? "grid grid-cols-3 gap-6" : "flex flex-col gap-4"}`}>
+      <div className={`p-6 ${viewType === "grid" ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" : "flex flex-col gap-4"}`}>
         {filteredProjects.map((project) => (
           <div
             key={project.projectID}
@@ -106,18 +104,18 @@ const Projects = () => {
             onClick={() => navigate(`/projects/${project.projectID}`)}
           >
             <h3 className="text-lg font-bold">{project.projectName}</h3>
-            <p className="text-sm text-gray-400">📅 {new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}</p>
+            <p className="text-sm text-gray-400">
+              📅 {new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}
+            </p>
             <p className="text-sm text-gray-400">👤 Manager: {project.projectManagerName}</p>
             <p className="text-sm text-gray-400">👥 Members: {project.membersCount}</p>
             <div className="mt-2 bg-gray-700 h-2 rounded">
               <div
-                className={`h-2 rounded ${
-                  project.visibility === "private" ? "bg-red-500" : "bg-green-500"
-                }`}
+                className={`h-2 rounded ${project.visibility === "private" ? "bg-red-500" : "bg-green-500"}`}
                 style={{ width: "100%" }}
               ></div>
             </div>
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-2 flex-wrap">
               <button className="bg-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-700">📌 Tasks</button>
               <button className="bg-gray-600 px-3 py-1 rounded text-sm hover:bg-gray-700">💬 Discussions</button>
               <button className="bg-gray-600 px-3 py-1 rounded text-sm hover:bg-gray-700">📂 Files</button>

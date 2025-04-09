@@ -27,12 +27,15 @@ const CreateProject = () => {
       
             setUserInfo(response.data);
       
-            // ✅ Fetch company users only if companyID is valid
+            // Fetch company users only if companyID is valid
             if (response.data.companyID) {
-              const usersResponse = await axios.get(`http://localhost:5045/api/users/company/${response.data.companyID}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                withCredentials: true,
-              });
+              const usersResponse = await axios.get(
+                `http://localhost:5045/api/users/company/${response.data.companyID}`,
+                {
+                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                  withCredentials: true,
+                }
+              );
       
               setUsers(usersResponse.data);
             }
@@ -41,7 +44,6 @@ const CreateProject = () => {
           }
         };
       
-
         fetchUserInfo();
     }, []);
 
@@ -62,8 +64,8 @@ const CreateProject = () => {
                     startDate: formData.startDate,
                     endDate: formData.endDate,
                     visibility: formData.visibility,
-                    companyID: userInfo.companyID,  // ✅ Send as integer
-                    projectManagerID: formData.projectManagerID,  // ✅ Send as string
+                    companyID: userInfo.companyID,
+                    projectManagerID: formData.projectManagerID,
                 },
                 {
                     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -79,7 +81,15 @@ const CreateProject = () => {
         <div className="min-h-screen bg-gray-900 text-white">
             <Navbar userInfo={userInfo} />
 
-            <div className="max-w-3xl mx-auto mt-10 bg-slate-800 p-6 rounded-lg shadow-lg">
+            <div className="max-w-3xl mx-auto mt-10 relative bg-slate-800 p-6 rounded-lg shadow-lg">
+                {/* Cancel button in the upper right corner */}
+                <button 
+                  onClick={() => navigate("/projects")} 
+                  className="absolute top-2 right-2 text-2xl font-bold hover:text-gray-400"
+                  aria-label="Cancel and go back"
+                >
+                    &times;
+                </button>
                 <h1 className="text-2xl font-bold mb-4">Create New Project</h1>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>

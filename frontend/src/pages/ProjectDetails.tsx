@@ -65,6 +65,7 @@ const ProjectDetails = () => {
           `http://localhost:5045/api/projects/${validProjectId}`,
           { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
         );
+        console.debug("Project details fetched:", response.data);
         setProject(response.data);
       } catch (error) {
         console.error("Error fetching project details:", error);
@@ -78,6 +79,7 @@ const ProjectDetails = () => {
           `http://localhost:5045/api/tasks/project/${validProjectId}`,
           { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
         );
+        console.debug("Tasks fetched:", response.data);
         setTasks(response.data);
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -90,6 +92,7 @@ const ProjectDetails = () => {
           `http://localhost:5045/api/users/project/${validProjectId}`,
           { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
         );
+        console.debug("Project members fetched:", response.data);
         setMembers(response.data);
       } catch (error: any) {
         if (error.response?.status === 404) {
@@ -106,12 +109,14 @@ const ProjectDetails = () => {
         const userResponse = await axios.get("http://localhost:5045/api/users/me", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
+        console.debug("User info fetched for company users:", userResponse.data);
         const companyId = userResponse.data.companyID;
         if (companyId) {
           const compUsersResponse = await axios.get(
             `http://localhost:5045/api/users/company/${companyId}`,
             { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
           );
+          console.debug("Company users fetched:", compUsersResponse.data);
           setCompanyUsers(compUsersResponse.data);
         }
       } catch (error) {
@@ -147,6 +152,7 @@ const ProjectDetails = () => {
         `http://localhost:5045/api/users/project/${validProjectId}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
+      console.debug("Members refreshed:", refreshed.data);
       setMembers(refreshed.data);
     } catch (err) {
       console.error("Error assigning members", err);
@@ -157,7 +163,7 @@ const ProjectDetails = () => {
   // Function to create a new task using the new form fields
   const createTask = async () => {
     try {
-      const newTask = {
+      const newTaskObject = {
         TaskName: newTaskName,
         Description: newTaskDescription,
         Deadline: newTaskDeadline,
@@ -167,9 +173,11 @@ const ProjectDetails = () => {
         AssignedUserIDs: newTaskAssignedUsers,
         AssignedGroupIDs: newTaskAssignedGroups,
       };
-      const response = await axios.post("http://localhost:5045/api/tasks/create", newTask, {
+      console.debug("Creating new task with data:", newTaskObject);
+      const response = await axios.post("http://localhost:5045/api/tasks/create", newTaskObject, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
+      console.debug("New task creation response:", response.data);
       alert("Task created successfully!");
       // Optionally update tasks list (if your API returns the created task)
       setTasks((prev) => [...prev, response.data.task]);
@@ -243,15 +251,6 @@ const ProjectDetails = () => {
       <div className="p-6">
         {activeTab === "tasks" && (
           <>
-            {/* Create Task Button */}
-            <div className="mb-4 flex justify-end">
-              <button
-                onClick={() => setShowCreateTaskModal(true)}
-                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-              >
-                Create Task
-              </button>
-            </div>
             {/* Existing tasks list rendered via TaskTab */}
             <TaskTab
               projectId={validProjectId}
@@ -269,7 +268,10 @@ const ProjectDetails = () => {
                 .get(`http://localhost:5045/api/users/project/${validProjectId}`, {
                   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                 })
-                .then((res) => setMembers(res.data))
+                .then((res) => {
+                  console.debug("Members after group update:", res.data);
+                  setMembers(res.data);
+                })
                 .catch((err) => console.error("Error refreshing members:", err));
             }}
           />

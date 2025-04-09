@@ -354,6 +354,113 @@ namespace ProjectManagmentTool.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { message = "Task and all associated assignments deleted successfully" });
         }
+
+        [HttpGet("project/{projectId}/search")]
+        public async Task<IActionResult> SearchTasksByProject(
+        int projectId,
+        [FromQuery] string searchTerm = null,
+        [FromQuery] string status = null,
+        [FromQuery] string priority = null,
+        [FromQuery] string sortBy = null,
+        [FromQuery] string sortOrder = "asc",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (currentUserId == null)
+                return Unauthorized("User is not authenticated.");
+
+            var user = await _context.Users.FindAsync(currentUserId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project == null || project.CompanyID != user.CompanyID)
+                return NotFound("Project not found or you don't have access.");
+
+            // Start with tasks for the project.
+            var query = _context.Tasks.AsQueryable().Where(t => t.ProjectID == projectId);
+
+            // Apply search filter for task name or description.
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(t => t.TaskName.Contains(searchTerm) || t.Description.Contains(searchTerm));
+            }
+
+            // Filter by status if provided.
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(t => t.Status == status);
+            }
+
+            // Filter by priority if provided.
+            if (!string.IsNullOrWhiteSpace(priority))
+            {
+                query = query.Where(t => t.Priority == priority);
+            }
+
+            // Apply sorting based on query parameters.
+            if (!string.IsNullOrWhiteSpace(sortBy))
+            {
+                // For simplicity, use a switch statement. In more advanced cases consider using Dynamic LINQ.
+                if (sortOrder.ToLower() == "desc")
+                {
+                    query = sortBy.ToLower() switch
+                    {
+                        "deadline" => query.OrderByDescending(t => t.Deadline),
+                        "priority" => query.OrderByDescending(t => t.Priority),
+                        _ => query.OrderByDescending(t => t.TaskName)
+                    };
+                }
+                else
+                {
+                    query = sortBy.ToLower() switch
+                    {
+                        "deadline" => query.OrderBy(t => t.Deadline),
+                        "priority" => query.OrderBy(t => t.Priority),
+                        _ => query.OrderBy(t => t.TaskName)
+                    };
+                }
+            }
+            else
+            {
+                // Default ordering.
+                query = query.OrderBy(t => t.TaskName);
+            }
+
+            // Optionally add pagination.
+            var totalTasks = await query.CountAsync();
+            var tasks = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(t => new
+                {
+                    t.TaskID,
+                    t.TaskName,
+                    t.Description,
+                    t.Deadline,
+                    t.Status,
+                    t.Priority,
+                    // Retrieve assigned user names via the join table if needed.
+                    AssignedTo = _context.UserTasks
+                                    .Where(ut => ut.TaskID == t.TaskID)
+                                    .Join(_context.Users,
+                                          ut => ut.UserID,
+                                          u => u.Id,
+                                          (ut, u) => u.FirstName + " " + u.LastName)
+                                    .ToList()
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                totalTasks,
+                page,
+                pageSize,
+                tasks
+            });
+        }
+
     }
 }
 

@@ -230,6 +230,13 @@ const TaskDetails = () => {
         }
     };
 
+    // Handle navigation to the project details page
+    const goToProjectDetails = () => {
+        if (task?.projectID) {
+            navigate(`/projects/${task.projectID}`);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -281,7 +288,14 @@ const TaskDetails = () => {
             {/* Header Section */}
             <div className="p-6 bg-slate-800 border-b border-gray-700">
                 <h1 className="text-2xl font-bold">
-                    {task.projectName} / {task.taskName}
+                    {/* Clickable project name */}
+                    <span
+                        onClick={goToProjectDetails}
+                        className="cursor-pointer hover:text-blue-400"
+                    >
+                        {task.projectName}
+                    </span>{" "}
+                    / {task.taskName}
                 </h1>
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
