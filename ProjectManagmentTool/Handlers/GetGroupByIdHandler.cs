@@ -19,13 +19,26 @@
         public async Task<GroupDetailsDTO> Handle(GetGroupByIdQuery request, CancellationToken cancellationToken)
         {
             var group = await _context.Groups
-                .Include(g => g.Tasks)
+                .Include(g => g.Tasks) // Direct one-to-many
+                .Include(g => g.TaskGroups) // Join table
+                    .ThenInclude(tg => tg.Task) // Tasks from many-to-many
                 .Include(g => g.GroupLead)
                 .Include(g => g.ProjectGroups)
                     .ThenInclude(pg => pg.Project)
                 .FirstOrDefaultAsync(g => g.GroupID == request.GroupId);
 
             if (group == null) return null;
+
+            // Merge tasks from both sources, avoiding duplicates
+            var allTasks = group.Tasks.ToList();
+
+            foreach (var tg in group.TaskGroups)
+            {
+                if (tg.Task != null && !allTasks.Any(t => t.TaskID == tg.Task.TaskID))
+                {
+                    allTasks.Add(tg.Task);
+                }
+            }
 
             return new GroupDetailsDTO
             {
@@ -34,9 +47,9 @@
                 Description = group.Description,
                 GroupLeadName = $"{group.GroupLead.FirstName} {group.GroupLead.LastName}",
                 ProjectAffiliation = group.ProjectGroups.Select(pg => pg.Project.ProjectName).ToList(),
-                CurrentProgress = "0%", // Placeholder or real logic if you have it
-                Status = "Active", // Placeholder
-                Tasks = group.Tasks.Select(t => new TaskDTO
+                CurrentProgress = group.CurrentProgress ?? "N/A",
+                Status = group.Status ?? "Active",
+                Tasks = allTasks.Select(t => new TaskDTO
                 {
                     TaskID = t.TaskID,
                     TaskName = t.TaskName,

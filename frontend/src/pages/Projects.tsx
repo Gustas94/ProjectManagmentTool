@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/Navbar";
+import { usePermission } from "../hooks/usePermission";
 
 interface Project {
   projectID: number;
@@ -14,6 +15,8 @@ interface Project {
   membersCount: number;
   createdAt: string;
   updatedAt: string;
+  totalTasks?: number;
+  completedTasks?: number;
 }
 
 const Projects = () => {
@@ -23,34 +26,44 @@ const Projects = () => {
   const [viewType, setViewType] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const { hasPermission } = usePermission();
 
   // Fetch user data and projects
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const response = await axios.get("http://localhost:5045/api/users/me", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        setUserInfo(response.data);
-      } catch (error) {
-        console.error("Failed to fetch user info:", error);
-      }
-    };
-
     const fetchProjects = async () => {
       try {
         const response = await axios.get("http://localhost:5045/api/projects/all", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
-        setProjects(response.data);
+
+        const projectsWithProgress = await Promise.all(
+          response.data.map(async (project: Project) => {
+            try {
+              const progressRes = await axios.get(`http://localhost:5045/api/tasks/project/${project.projectID}/progress`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+              });
+
+              return {
+                ...project,
+                totalTasks: progressRes.data.totalTasks,
+                completedTasks: progressRes.data.completedTasks,
+              };
+            } catch (error) {
+              console.error(`Error fetching progress for project ${project.projectID}`, error);
+              return project; // fallback if progress fetch fails
+            }
+          })
+        );
+
+        setProjects(projectsWithProgress);
       } catch (error) {
         console.error("Error fetching projects:", error);
       }
     };
 
-    fetchUserInfo();
     fetchProjects();
   }, []);
+
 
   // Filter projects based on search & status
   const filteredProjects = projects.filter((project) =>
@@ -61,7 +74,7 @@ const Projects = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Navbar */}
-      <Navbar userInfo={userInfo} />
+      <Navbar />
 
       {/* Search, Filter & Create Project Button */}
       <div className="p-4 bg-slate-800 border-b border-gray-700 flex flex-wrap justify-between items-center gap-2">
@@ -87,12 +100,16 @@ const Projects = () => {
         >
           {viewType === "grid" ? "🔲 Grid View" : "📋 List View"}
         </button>
-        <button
-          className="w-full sm:w-auto bg-green-600 px-4 py-2 rounded hover:bg-green-700"
-          onClick={() => navigate("/projects/create-project")}
-        >
-          ➕ Create Project
-        </button>
+        <div>
+          {hasPermission("CREATE_PROJECT") && (
+            <button
+              className="w-full sm:w-auto bg-green-600 px-4 py-2 rounded hover:bg-green-700"
+              onClick={() => navigate("/projects/create-project")}
+            >
+              ➕ Create Project
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Project List/Grid View */}
@@ -109,11 +126,21 @@ const Projects = () => {
             </p>
             <p className="text-sm text-gray-400">👤 Manager: {project.projectManagerName}</p>
             <p className="text-sm text-gray-400">👥 Members: {project.membersCount}</p>
-            <div className="mt-2 bg-gray-700 h-2 rounded">
-              <div
-                className={`h-2 rounded ${project.visibility === "private" ? "bg-red-500" : "bg-green-500"}`}
-                style={{ width: "100%" }}
-              ></div>
+            <div className="mt-2">
+              <p className="text-sm text-gray-400">
+                ✅ Progress:{" "}
+                {project.totalTasks ? `${Math.round((project.completedTasks ?? 0) / project.totalTasks * 100)}%` : "N/A"}
+              </p>
+              <div className="w-full bg-gray-700 h-2 rounded">
+                <div
+                  className="h-2 rounded bg-blue-500"
+                  style={{
+                    width: project.totalTasks
+                      ? `${(project.completedTasks ?? 0) / project.totalTasks * 100}%`
+                      : "0%",
+                  }}
+                />
+              </div>
             </div>
             <div className="flex gap-2 mt-2 flex-wrap">
               <button className="bg-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-700">📌 Tasks</button>

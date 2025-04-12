@@ -4,6 +4,7 @@ import axios from "axios";
 import Navbar from "../components/Navbar";
 import GroupsTab from "../components/GroupsTab";
 import TaskTab from "../components/TaskTab";
+import { usePermission } from "../hooks/usePermission";
 
 // ================================
 // TypeScript Interfaces
@@ -57,6 +58,8 @@ const ProjectDetails = () => {
   // If you want to assign users or groups during creation, add those states as needed:
   const [newTaskAssignedUsers, setNewTaskAssignedUsers] = useState<string[]>([]);
   const [newTaskAssignedGroups, setNewTaskAssignedGroups] = useState<number[]>([]);
+
+  const { hasPermission } = usePermission();
 
   useEffect(() => {
     const fetchProjectDetails = async () => {
@@ -213,7 +216,7 @@ const ProjectDetails = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <Navbar userInfo={{ firstName: "User", lastName: "", role: "Developer" }} />
+      <Navbar />
 
       {/* Project Overview */}
       <div className="p-6 bg-slate-800 border-b border-gray-700">
@@ -280,12 +283,14 @@ const ProjectDetails = () => {
           <div className="mt-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Group Members</h3>
+              {hasPermission("ASSIGN_MEMBERS") && (
               <button
                 className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
                 onClick={() => setShowAssignModal(true)}
               >
                 ➕ Assign Members
               </button>
+              )}
             </div>
 
             {membersLoading ? (

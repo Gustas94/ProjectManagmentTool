@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { usePermission } from "../hooks/usePermission";
 
 interface AssignedGroup {
   groupID: number;
@@ -27,6 +28,7 @@ const GroupsTab = ({ projectId, onGroupChange }: GroupsTabProps) => {
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [selectedGroupID, setSelectedGroupID] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const { hasPermission } = usePermission();
 
   // Fetch assigned groups for the project
   const fetchAssignedGroups = async () => {
@@ -122,45 +124,50 @@ const GroupsTab = ({ projectId, onGroupChange }: GroupsTabProps) => {
               <h3 className="font-bold">{group.groupName}</h3>
               <p className="text-sm text-gray-400">{group.description}</p>
               <p className="text-sm text-gray-400">Team Lead: {group.groupLeadName}</p>
-              <button
-                className="mt-2 text-red-400 hover:text-red-600 text-sm underline"
-                onClick={() => removeGroup(group.groupID)}
-              >
-                ❌ Remove Group
-              </button>
+              {hasPermission("REMOVE_GROUP") && (
+                <button
+                  className="mt-2 text-red-400 hover:text-red-600 text-sm underline"
+                  onClick={() => removeGroup(group.groupID)}
+                >
+                  ❌ Remove Group
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
-      <div className="mt-6">
-        <h2 className="text-xl font-bold">Assign a New Group</h2>
-        {availableGroups.length === 0 ? (
-          <p className="text-gray-400 mt-2">No available groups to assign.</p>
-        ) : (
-          <div className="mt-2 flex items-center gap-4">
-            <select
-              className="p-2 bg-gray-700 rounded"
-              value={selectedGroupID ?? ""}
-              onChange={(e) => setSelectedGroupID(Number(e.target.value))}
-            >
-              <option value="">-- Select Group --</option>
-              {availableGroups.map((group) => (
-                <option key={group.groupID} value={group.groupID}>
-                  {group.groupName}
-                </option>
-              ))}
-            </select>
-            <button
-              className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
-              onClick={assignGroup}
-            >
-              Assign Group
-            </button>
-          </div>
-        )}
-      </div>
+
+      {hasPermission("ASSIGN_MEMBERS") && (
+        <div className="mt-6">
+          <h2 className="text-xl font-bold">Assign a New Group</h2>
+          {availableGroups.length === 0 ? (
+            <p className="text-gray-400 mt-2">No available groups to assign.</p>
+          ) : (
+            <div className="mt-2 flex items-center gap-4">
+              <select
+                className="p-2 bg-gray-700 rounded"
+                value={selectedGroupID ?? ""}
+                onChange={(e) => setSelectedGroupID(Number(e.target.value))}
+              >
+                <option value="">-- Select Group --</option>
+                {availableGroups.map((group) => (
+                  <option key={group.groupID} value={group.groupID}>
+                    {group.groupName}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
+                onClick={assignGroup}
+              >
+                Assign Group
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default GroupsTab;

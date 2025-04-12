@@ -23,7 +23,8 @@ namespace ProjectManagmentTool.Data
         public DbSet<GroupMember> GroupMembers { get; set; }
         public DbSet<TaskGroup> TaskGroups { get; set; }
         public DbSet<Industry> Industries { get; set; }
-
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

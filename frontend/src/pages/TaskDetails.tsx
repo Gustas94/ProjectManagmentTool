@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/Navbar";
+import { UserContext } from "../contexts/UserContext"; // Adjust the path as needed
 
 interface GroupAssignedUser {
     id: string;
@@ -68,6 +69,11 @@ const TaskDetails = () => {
     // Modal toggle
     const [showAssignModal, setShowAssignModal] = useState(false);
 
+    const { user: currentUser } = useContext(UserContext);
+
+    // Get the current user from context
+    const { user } = useContext(UserContext);
+
     useEffect(() => {
         if (taskId) {
             fetchTaskDetails(taskId);
@@ -106,6 +112,30 @@ const TaskDetails = () => {
             navigate("/projects");
         }
         setLoading(false);
+    };
+
+    const markAsCompleted = async () => {
+        try {
+            await axios.put(
+                `http://localhost:5045/api/tasks/${taskId}`,
+                {
+                    taskName,
+                    description,
+                    deadline,
+                    priority,
+                    status: "Completed",
+                    projectID: task?.projectID,
+                    assignedUserIDs: task?.individualAssignedUsers?.map(user => user.id) || [],
+                    assignedGroupIDs: task?.assignedGroups?.map(group => group.groupID) || []
+                },
+                {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                }
+            );
+            fetchTaskDetails(taskId!);
+        } catch (error) {
+            console.error("Failed to mark task as completed", error);
+        }
     };
 
     const fetchProjectMembers = async (projectId: number) => {
@@ -170,7 +200,6 @@ const TaskDetails = () => {
         }
     };
 
-    // Remove a direct user assignment (does not remove group-based assignment)
     const removeUserFromTask = async (userId: string) => {
         try {
             await axios.delete(`http://localhost:5045/api/tasks/${taskId}/assign/user/${userId}`, {
@@ -230,7 +259,6 @@ const TaskDetails = () => {
         }
     };
 
-    // Handle navigation to the project details page
     const goToProjectDetails = () => {
         if (task?.projectID) {
             navigate(`/projects/${task.projectID}`);
@@ -253,19 +281,19 @@ const TaskDetails = () => {
         );
     }
 
-    // Build combined assigned users: those assigned directly (from individualAssignedUsers)
-    // are marked with directly=true. Then merge in groupAssignedUsers.
+    // Build combined assigned users: those assigned directly are marked with directly=true,
+    // then merge in groupAssignedUsers.
     const combined: { [id: string]: CombinedAssignedUser } = {};
-    task.individualAssignedUsers.forEach(user => {
+    task.individualAssignedUsers.forEach((user) => {
         combined[user.id] = {
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
             groups: [],
-            directly: true
+            directly: true,
         };
     });
-    task.groupAssignedUsers.forEach(user => {
+    task.groupAssignedUsers.forEach((user) => {
         if (combined[user.id]) {
             if (!combined[user.id].groups.includes(user.groupName)) {
                 combined[user.id].groups.push(user.groupName);
@@ -275,7 +303,7 @@ const TaskDetails = () => {
                 id: user.id,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                groups: [user.groupName]
+                groups: [user.groupName],
             };
         }
     });
@@ -283,16 +311,12 @@ const TaskDetails = () => {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
-            <Navbar userInfo={{ firstName: "User", lastName: "", role: "Developer" }} />
+            <Navbar />
 
             {/* Header Section */}
             <div className="p-6 bg-slate-800 border-b border-gray-700">
                 <h1 className="text-2xl font-bold">
-                    {/* Clickable project name */}
-                    <span
-                        onClick={goToProjectDetails}
-                        className="cursor-pointer hover:text-blue-400"
-                    >
+                    <span onClick={goToProjectDetails} className="cursor-pointer hover:text-blue-400">
                         {task.projectName}
                     </span>{" "}
                     / {task.taskName}
@@ -305,6 +329,7 @@ const TaskDetails = () => {
                             className="w-full p-2 bg-gray-700 text-white rounded"
                             value={taskName}
                             onChange={(e) => setTaskName(e.target.value)}
+                            disabled={!user?.permissions?.includes("EDIT_TASK")}
                         />
                     </div>
                     <div>
@@ -314,6 +339,7 @@ const TaskDetails = () => {
                             className="w-full p-2 bg-gray-700 text-white rounded"
                             value={deadline}
                             onChange={(e) => setDeadline(e.target.value)}
+                            disabled={!user?.permissions?.includes("EDIT_TASK")}
                         />
                     </div>
                     <div>
@@ -322,6 +348,7 @@ const TaskDetails = () => {
                             className="w-full p-2 bg-gray-700 text-white rounded"
                             value={priority}
                             onChange={(e) => setPriority(e.target.value)}
+                            disabled={!user?.permissions?.includes("EDIT_TASK")}
                         >
                             <option value="High">High</option>
                             <option value="Medium">Medium</option>
@@ -329,7 +356,7 @@ const TaskDetails = () => {
                         </select>
                     </div>
                 </div>
-                {/* New row for Description and Status */}
+                {/* Row for Description and Status */}
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-gray-300">Description</label>
@@ -338,6 +365,7 @@ const TaskDetails = () => {
                             rows={3}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
+                            disabled={!user?.permissions?.includes("EDIT_TASK")}
                         ></textarea>
                     </div>
                     <div>
@@ -346,6 +374,7 @@ const TaskDetails = () => {
                             className="w-full p-2 bg-gray-700 text-white rounded"
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
+                            disabled={!user?.permissions?.includes("EDIT_TASK")}
                         >
                             <option value="To Do">To Do</option>
                             <option value="In Progress">In Progress</option>
@@ -354,44 +383,60 @@ const TaskDetails = () => {
                         </select>
                     </div>
                 </div>
+                {/* Action Buttons - Render based on permissions */}
                 <div className="flex items-center space-x-2 mt-4">
-                    <button onClick={updateTask} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
-                        Update Task
-                    </button>
-                    <button onClick={deleteTask} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
-                        Delete Task
-                    </button>
-                    <button onClick={() => setShowAssignModal(true)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
-                        ➕ Assign Members/Groups
-                    </button>
+                    {user && user.permissions?.includes("EDIT_TASK") && (
+                        <button onClick={updateTask} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                            Update Task
+                        </button>
+                    )}
+                    {user && user.permissions?.includes("DELETE_TASK") && (
+                        <button onClick={deleteTask} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+                            Delete Task
+                        </button>
+                    )}
+                    {user && user.permissions?.includes("ASSIGN_TASK") && (
+                        <button onClick={() => setShowAssignModal(true)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+                            ➕ Assign Members/Groups
+                        </button>
+                    )}
+                    {user && user.permissions?.includes("COMPLETE_TASK") && status !== "Completed" && (
+                        <button
+                            onClick={markAsCompleted}
+                            className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded"
+                        >
+                            ✅ Mark as Completed
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Assigned Users & Groups as Cards */}
+            {/* Assigned Users & Groups */}
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <h3 className="text-xl font-bold mb-2">Assigned Users</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {combinedAssignedUsers.map((user) => {
+                        {combinedAssignedUsers.map((assignedUser) => {
                             const labelParts: string[] = [];
-                            if (user.directly) {
+                            if (assignedUser.directly) {
                                 labelParts.push("Directly");
                             }
-                            if (user.groups && user.groups.length > 0) {
-                                user.groups.forEach((group) => {
-                                    labelParts.push(`${group}`);
+                            if (assignedUser.groups && assignedUser.groups.length > 0) {
+                                assignedUser.groups.forEach((group) => {
+                                    labelParts.push(group);
                                 });
                             }
                             const finalLabel = labelParts.join(", ");
                             return (
-                                <div key={user.id} className="bg-gray-700 p-4 rounded shadow">
+                                <div key={assignedUser.id} className="bg-gray-700 p-4 rounded shadow">
                                     <div className="flex justify-between items-center">
                                         <p className="font-bold">
-                                            {user.firstName} {user.lastName}
+                                            {assignedUser.firstName} {assignedUser.lastName}
                                         </p>
-                                        {user.directly && (
+                                        {/* Use currentUser from context (assume you have it via useContext(UserContext)) */}
+                                        {assignedUser.directly && currentUser && currentUser.permissions?.includes("ASSIGN_TASK") && (
                                             <button
-                                                onClick={() => removeUserFromTask(user.id)}
+                                                onClick={() => removeUserFromTask(assignedUser.id)}
                                                 className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs"
                                             >
                                                 Remove Direct
@@ -404,6 +449,7 @@ const TaskDetails = () => {
                                 </div>
                             );
                         })}
+
                     </div>
                 </div>
                 <div>
@@ -412,12 +458,14 @@ const TaskDetails = () => {
                         {task.assignedGroups.map((group) => (
                             <div key={group.groupID} className="bg-gray-700 p-4 rounded shadow flex justify-between items-center">
                                 <p className="font-bold">{group.groupName}</p>
-                                <button
-                                    onClick={() => removeGroupFromTask(group.groupID)}
-                                    className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs"
-                                >
-                                    Remove
-                                </button>
+                                {user && user.permissions?.includes("ASSIGN_TASK") && (
+                                    <button
+                                        onClick={() => removeGroupFromTask(group.groupID)}
+                                        className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs"
+                                    >
+                                        Remove
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -464,16 +512,10 @@ const TaskDetails = () => {
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
-                            <button
-                                onClick={() => setShowAssignModal(false)}
-                                className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded"
-                            >
+                            <button onClick={() => setShowAssignModal(false)} className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">
                                 Cancel
                             </button>
-                            <button
-                                onClick={assignUsersAndGroups}
-                                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-                            >
+                            <button onClick={assignUsersAndGroups} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
                                 Add Selected
                             </button>
                         </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/Navbar";
+import { usePermission } from "../hooks/usePermission";
 
 interface Group {
   groupID: number;
@@ -25,6 +26,7 @@ const Groups = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const { hasPermission } = usePermission();
 
   // State for new group creation
   const [newGroup, setNewGroup] = useState<{
@@ -47,7 +49,7 @@ const Groups = () => {
         });
         console.log("User info response:", response.data); // ✅ Debug log
         setUserInfo(response.data);
-  
+
         // Fetch company users once userInfo is set
         if (response.data.companyID) {
           const compResponse = await axios.get(
@@ -60,10 +62,10 @@ const Groups = () => {
         console.error("Failed to fetch user info or company users:", error);
       }
     };
-  
+
     fetchUserInfo();
   }, []);
-  
+
   useEffect(() => {
     if (userInfo.companyID) {
       const fetchGroups = async () => {
@@ -71,21 +73,21 @@ const Groups = () => {
           const response = await axios.get(`http://localhost:5045/api/groups/all`, {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
           });
-  
+
           // FIX: Ensure `userInfo.companyID` is available
           console.log("Fetching groups for company:", userInfo.companyID);
           const filteredGroups = response.data.filter((group: Group) => group.companyID === userInfo.companyID);
-  
+
           setGroups(filteredGroups);
         } catch (error) {
           console.error("Error fetching groups:", error);
         }
       };
-  
+
       fetchGroups();
     }
   }, [userInfo.companyID]); // FIX: Run fetchGroups only when `userInfo.companyID` changes
-  
+
 
   const toggleMemberSelection = (userId: string) => {
     setNewGroup((prev) => {
@@ -140,17 +142,19 @@ const Groups = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <Navbar userInfo={userInfo} />
+      <Navbar />
 
       {/* Header */}
       <div className="p-4 bg-slate-800 border-b border-gray-700 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Groups</h1>
-        <button
-          className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
-          onClick={() => setShowGroupModal(true)}
-        >
-          ➕ Create Group
-        </button>
+        {hasPermission("CREATE_GROUP") && (
+          <button
+            className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
+            onClick={() => setShowGroupModal(true)}
+          >
+            ➕ Create Group
+          </button>
+        )}
       </div>
 
       {/* Groups List */}

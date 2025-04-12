@@ -25,30 +25,6 @@ namespace ProjectManagmentTool.Controllers
             _userManager = userManager;
         }
 
-        // 1. Get Current Logged-In User Info
-        [HttpGet("me")]
-        public async Task<IActionResult> GetCurrentUserInfo()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
-                return Unauthorized("User is not authenticated.");
-
-            var user = await _context.Users
-                .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Id == userId);
-
-            if (user == null)
-                return NotFound("User not found.");
-
-            return Ok(new
-            {
-                firstName = user.FirstName,
-                lastName = user.LastName,
-                role = user.Role != null ? user.Role.Name : "Unknown",
-                companyID = user.CompanyID
-            });
-        }
-
         // 2. Get All Users in a Company (For Project Manager Selection)
         [HttpGet("company/{companyId}")]
         public async Task<IActionResult> GetUsersByCompany(int companyId)
@@ -185,6 +161,35 @@ namespace ProjectManagmentTool.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "User added to project successfully." });
+        }
+
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; // ✅ this is more reliable
+            if (userId == null) return Unauthorized();
+
+            var user = await _userManager.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null) return NotFound();
+
+            var permissions = await _context.RolePermissions
+                .Where(rp => rp.RoleID == user.RoleID)
+                .Select(rp => rp.Permission.PermissionName)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                id = user.Id,
+                firstName = user.FirstName,
+                lastName = user.LastName,
+                email = user.Email,
+                role = user.Role?.Name,
+                companyID = user.CompanyID,
+                permissions
+            });
         }
     }
 }

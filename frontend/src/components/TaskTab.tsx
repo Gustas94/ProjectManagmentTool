@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { usePermission } from "../hooks/usePermission";
 
 // Define types if not imported from elsewhere
 export interface Task {
@@ -58,6 +59,8 @@ const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
   const groupsPerPage = 20;
   const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const totalGroupPages = Math.ceil(availableGroups.length / groupsPerPage);
+
+  const { hasPermission } = usePermission();
 
   // The new/extended task object that includes both user & group assignment
   const [newTask, setNewTask] = useState<ExtendedTask>({
@@ -243,13 +246,14 @@ const TasksTab = ({ projectId, tasks, setTasks, members }: TasksTabProps) => {
   return (
     <div>
       <h2 className="text-xl font-bold">Tasks</h2>
-      <button
-        className="bg-green-600 px-4 py-2 rounded mt-2"
-        onClick={() => setShowTaskModal(true)}
-      >
-        ➕ Create Task
-      </button>
-
+      {hasPermission("CREATE_TASK") && (
+        <button
+          className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded mb-4"
+          onClick={() => setShowTaskModal(true)}
+        >
+          ➕ Create Task
+        </button>
+      )}
       {/* Search / Filter / Sort UI */}
       <div className="mt-4 p-4 bg-gray-800 rounded">
         <h3 className="text-lg font-bold text-white mb-2">Search / Filter Tasks</h3>

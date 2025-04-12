@@ -8,6 +8,8 @@ using MediatR;
 using System.Reflection;
 using System.Text;
 using ProjectManagmentTool.Observers;
+using Microsoft.AspNetCore.Authorization;
+using ProjectManagmentTool.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +21,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Identity Configuration
-builder.Services.AddIdentity<User, Role>() // Use your Role class
+builder.Services.AddIdentity<User, Role>() // Use your custom Role class
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
@@ -32,7 +34,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; // No HTTPS
+    options.RequireHttpsMetadata = false; // For development only—set to true in production
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -46,28 +48,45 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Enable Authorization
-builder.Services.AddAuthorization();
+// Enable Authorization and define policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPanelAccess", policy =>
+        policy.Requirements.Add(new PermissionRequirement("ADMIN_PANEL_ACCESS")));
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPanelAccess", policy =>
+    {
+        policy.Requirements.Add(new AdminPanelAccessRequirement());
+    });
+});
+
+// Register the handler
+builder.Services.AddSingleton<IAuthorizationHandler, AdminPanelAccessHandler>();
+
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register CORS Policy
+// Register CORS Policy (adjust the origin as needed)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")  // Allow frontend
+        policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();  // Required for authentication
+              .AllowCredentials();
     });
 });
 
 // Register Repository (Dependency Injection)
 builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 
-// Register MediatR (Automatically finds all handlers)
+// Register MediatR (Automatically discovers all handlers)
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
 // Register ProjectRepository
@@ -79,49 +98,61 @@ builder.Services.Decorate<IProjectRepository, LoggingProjectRepositoryDecorator>
 // Register Observer & Subject
 var taskSubject = new TaskSubject();
 taskSubject.Attach(new ConsoleTaskObserver()); // Attach observer
-
 builder.Services.AddSingleton(taskSubject); // Register as a Singleton
 
 var app = builder.Build();
 
-// Ensure CEO Role Exists on Startup
-using (var scope = app.Services.CreateScope())
+//
+// Role Seeding: This method ensures that essential roles exist at startup.
+// It is not part of the admin panel, but runs automatically during application startup.
+//
+async Task SeedRolesAsync(IHost host)
 {
-    var services = scope.ServiceProvider;
-    var roleManager = services.GetRequiredService<RoleManager<Role>>();
-
-    string roleName = "CEO";
-    var existingRole = await roleManager.FindByNameAsync(roleName);
-
-    if (existingRole == null)
+    using (var scope = host.Services.CreateScope())
     {
-        var role = new Role
-        {
-            Id = Guid.NewGuid().ToString(),  // Ensure unique ID
-            Name = roleName,
-            NormalizedName = roleName.ToUpper(),
-            IsCompanyRole = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        var services = scope.ServiceProvider;
+        var roleManager = services.GetRequiredService<RoleManager<Role>>();
 
-        var result = await roleManager.CreateAsync(role);
-        if (!result.Succeeded)
+        // Define the roles you want to initialize
+        string[] roleNames = { "CEO", "Administrator", "ProjectManager", "Developer" };
+
+        foreach (var roleName in roleNames)
         {
-            Console.WriteLine($"Error creating role {roleName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            if (!await roleManager.RoleExistsAsync(roleName))
+            {
+                var role = new Role
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = roleName,
+                    NormalizedName = roleName.ToUpper(),
+                    // For example, you might treat "Administrator" as a global role.
+                    IsCompanyRole = roleName != "Administrator",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                var result = await roleManager.CreateAsync(role);
+                if (!result.Succeeded)
+                {
+                    Console.WriteLine($"Error creating role {roleName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                }
+                else
+                {
+                    Console.WriteLine($"{roleName} role created successfully.");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"{roleName} role already exists. Skipping creation.");
+            }
         }
-        else
-        {
-            Console.WriteLine($"CEO role created successfully.");
-        }
-    }
-    else
-    {
-        Console.WriteLine($"CEO role already exists. Skipping creation.");
     }
 }
 
-// Apply CORS BEFORE authentication & authorization
+// Call the seeding method during startup
+await SeedRolesAsync(app);
+
+// Apply CORS BEFORE authentication & authorization middleware
 app.UseCors("AllowReactApp");
 
 app.UseRouting();

@@ -44,7 +44,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Navbar */}
-      <Navbar userInfo={userInfo} />
+      <Navbar />
 
       {/* Invitation Section */}
       <div className="p-6">

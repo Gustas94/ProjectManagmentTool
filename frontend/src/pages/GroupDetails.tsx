@@ -88,22 +88,22 @@ const GroupDetails = () => {
     const removeMember = async (userId: string) => {
         const confirmRemove = window.confirm("Are you sure you want to remove this member from the group?");
         if (!confirmRemove) return;
-      
+
         try {
-          await axios.delete(
-            `http://localhost:5045/api/groups/${groupId}/members/${userId}`,
-            {
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            }
-          );
-      
-          setMembers((prev) => prev.filter((m) => m.id !== userId));
-          alert("Member removed successfully.");
+            await axios.delete(
+                `http://localhost:5045/api/groups/${groupId}/members/${userId}`,
+                {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                }
+            );
+
+            setMembers((prev) => prev.filter((m) => m.id !== userId));
+            alert("Member removed successfully.");
         } catch (err) {
-          console.error("Error removing member:", err);
-          alert("Failed to remove member.");
+            console.error("Error removing member:", err);
+            alert("Failed to remove member.");
         }
-      };      
+    };
 
     useEffect(() => {
         const fetchCompanyUsers = async () => {
@@ -130,26 +130,26 @@ const GroupDetails = () => {
 
     const assignMembers = async () => {
         try {
-          await axios.post(
-            `http://localhost:5045/api/groups/${groupId}/assign-members`,
-            { memberIDs: selectedMembers },
-            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-          );
-          alert("Members assigned successfully!");
-          setSelectedMembers([]);
-          
-          //Refresh members list directly:
-          const refreshed = await axios.get(
-            `http://localhost:5045/api/groups/${groupId}/members`,
-            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-          );
-          setMembers(refreshed.data);
-      
+            await axios.post(
+                `http://localhost:5045/api/groups/${groupId}/assign-members`,
+                { memberIDs: selectedMembers },
+                { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+            );
+            alert("Members assigned successfully!");
+            setSelectedMembers([]);
+
+            //Refresh members list directly:
+            const refreshed = await axios.get(
+                `http://localhost:5045/api/groups/${groupId}/members`,
+                { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+            );
+            setMembers(refreshed.data);
+
         } catch (err) {
-          console.error("Error assigning members", err);
-          alert("Failed to assign members.");
+            console.error("Error assigning members", err);
+            alert("Failed to assign members.");
         }
-      };
+    };
 
     if (loading) {
         return (
@@ -169,7 +169,7 @@ const GroupDetails = () => {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
-            <Navbar userInfo={{ firstName: "User", lastName: "", role: "CEO" }} />
+            <Navbar />
             <div className="p-6 bg-slate-800 border-b border-gray-700">
                 <button
                     className="text-gray-400 mb-4 hover:text-white"
@@ -238,7 +238,11 @@ const GroupDetails = () => {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {group.tasks.map((task) => (
-                                    <div key={task.taskID} className="p-4 bg-gray-700 rounded shadow-lg">
+                                    <div
+                                        key={task.taskID}
+                                        className="p-4 bg-gray-700 rounded shadow-lg hover:bg-gray-600 cursor-pointer transition"
+                                        onClick={() => navigate(`/tasks/${task.taskID}`)}
+                                    >
                                         <h3 className="text-lg font-bold">{task.taskName}</h3>
                                         <p className="text-sm text-gray-400">
                                             🗓 Deadline: {new Date(task.deadline).toLocaleDateString()}

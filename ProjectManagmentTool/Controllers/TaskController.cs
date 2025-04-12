@@ -68,6 +68,7 @@ namespace ProjectManagmentTool.Controllers
             return Ok(tasks);
         }
 
+        [Authorize(Policy = "CreateTaskPolicy")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateTask([FromBody] TaskRequestDTO request)
         {
@@ -353,6 +354,30 @@ namespace ProjectManagmentTool.Controllers
             _context.Tasks.Remove(task);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Task and all associated assignments deleted successfully" });
+        }
+
+        [Authorize(Policy = "CompleteTaskPolicy")]
+        [HttpPut("{taskId}/complete")]
+        public async Task<IActionResult> MarkAsCompleted(int taskId)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+                return NotFound("Task not found.");
+
+            task.Status = "Completed";
+            task.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Task marked as completed." });
+        }
+
+        [HttpGet("project/{projectId}/progress")]
+        public async Task<IActionResult> GetProjectTaskProgress(int projectId)
+        {
+            var totalTasks = await _context.Tasks.CountAsync(t => t.ProjectID == projectId);
+            var completedTasks = await _context.Tasks.CountAsync(t => t.ProjectID == projectId && t.Status == "Completed");
+
+            return Ok(new { projectId, totalTasks, completedTasks });
         }
 
         [HttpGet("project/{projectId}/search")]

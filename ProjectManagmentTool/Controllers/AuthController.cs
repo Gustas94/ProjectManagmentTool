@@ -20,14 +20,14 @@ namespace ProjectManagmentTool.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly RoleManager<Role> _roleManager;
         private readonly IConfiguration _configuration;
-        private readonly ApplicationDbContext _context; // ✅ Injected
+        private readonly ApplicationDbContext _context; // Injected ApplicationDbContext
 
         public AuthController(
             UserManager<User> userManager,
             SignInManager<User> signInManager,
             RoleManager<Role> roleManager,
             IConfiguration configuration,
-            ApplicationDbContext context) // ✅ Injected ApplicationDbContext
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -64,7 +64,7 @@ namespace ProjectManagmentTool.Controllers
                     FirstName = request.FirstName,
                     LastName = request.LastName,
                     RoleID = userRole.Id,
-                    CompanyID = invitation.CompanyID, // ✅ Assign to invited company
+                    CompanyID = invitation.CompanyID, // Assign to invited company
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -78,7 +78,7 @@ namespace ProjectManagmentTool.Controllers
             }
             else
             {
-                // ✅ Default registration (No invite, assign CEO role)
+                // Default registration (No invite, assign CEO role)
                 var userRole = await _roleManager.Roles.FirstOrDefaultAsync(r => r.NormalizedName == "CEO");
                 if (userRole == null)
                     return StatusCode(500, "CEO role does not exist. Please create it first.");
@@ -114,20 +114,50 @@ namespace ProjectManagmentTool.Controllers
             if (!result.Succeeded)
                 return Unauthorized("Invalid credentials.");
 
-            // Generate JWT Token
-            var token = GenerateJwtToken(user);
+            // Generate JWT Token that includes role and permission claims
+            var token = await GenerateJwtToken(user);
             return Ok(new { token });
         }
 
-        private string GenerateJwtToken(User user)
+        // Generates a JWT token with role and permission claims.
+        private async Task<string> GenerateJwtToken(User user)
         {
-            var claims = new[]
+            // Get roles assigned to the user
+            var roles = await _userManager.GetRolesAsync(user);
+            var roleClaims = roles.Select(role => new Claim(ClaimTypes.Role, role));
+
+            // Get permission claims from roles
+            var permissionClaims = new List<Claim>();
+            foreach (var roleName in roles)
+            {
+                // Load the full role including its RolePermissions and Permission objects.
+                var roleEntity = await _roleManager.Roles
+                    .Include(r => r.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
+                    .FirstOrDefaultAsync(r => r.Name == roleName);
+                if (roleEntity?.RolePermissions != null)
+                {
+                    foreach (var rp in roleEntity.RolePermissions)
+                    {
+                        // Avoid duplicate claims if multiple roles share the same permission.
+                        if (!permissionClaims.Any(c => c.Type == "Permission" && c.Value == rp.Permission.PermissionName))
+                        {
+                            permissionClaims.Add(new Claim("Permission", rp.Permission.PermissionName));
+                        }
+                    }
+                }
+            }
+
+            var baseClaims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+
+            // Combine all claims: base, role, and permission claims.
+            var claims = baseClaims.Union(roleClaims).Union(permissionClaims);
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -150,7 +180,7 @@ namespace ProjectManagmentTool.Controllers
         public string Password { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public string? InviteCode { get; set; } // ✅ Fixed missing InviteCode
+        public string? InviteCode { get; set; } // Optional invite code
     }
 
     public class LoginRequest
