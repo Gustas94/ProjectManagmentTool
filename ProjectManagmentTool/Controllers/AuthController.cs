@@ -74,6 +74,11 @@ namespace ProjectManagmentTool.Controllers
                     return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
 
                 await _userManager.AddToRoleAsync(user, userRole.Name);
+
+                // Remove the invitation after successful registration.
+                _context.Invitations.Remove(invitation);
+                await _context.SaveChangesAsync();
+
                 return Ok(new { message = "User registered successfully via invite." });
             }
             else

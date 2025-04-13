@@ -25,12 +25,12 @@
 |   |   |   +---DesignTimeBuild
 |   |   |   |   .dtbcache.v2
 |   |   |   +---FileContentIndex
-|   |   |   |   06f963f1-3661-436c-ad97-7c3689399cd5.vsidx
-|   |   |   |   4d3ebcaf-4da2-46a9-b365-0268c47d042a.vsidx
-|   |   |   |   517c4469-99fd-4f7e-943a-31d67eea7587.vsidx
-|   |   |   |   5f1aa7cf-726f-4430-bf93-b569415b59b7.vsidx
-|   |   |   |   a82c96c4-c8a3-42cd-b757-d97a862e74c4.vsidx
-|   |   |   |   f4f2ea57-ec9e-4c1f-8152-862b7d293a8b.vsidx
+|   |   |   |   30e20c46-118c-4e4d-96c3-be5ca47a77ed.vsidx
+|   |   |   |   7d15e703-d336-406c-b210-2604a800a175.vsidx
+|   |   |   |   a5918e8f-4c6c-4c93-aa7c-241381e6ac15.vsidx
+|   |   |   |   b1650663-b688-49b0-8b55-d6d44ed954ac.vsidx
+|   |   |   |   fc560139-b520-4ffa-9761-90009279e3c2.vsidx
+|   |   |   |   fea90935-9c18-4486-909a-bf2e6c00df7a.vsidx
 |   |   |   +---v17
 |   |   |   |   .futdcache.v2
 |   |   |   |   .suo
@@ -46,9 +46,14 @@
 |   |   |   |   MembersTab.tsx
 |   |   |   |   Navbar.tsx
 |   |   |   |   TaskTab.tsx
+|   |   |   +---contexts
+|   |   |   |   UserContext.tsx
 |   |   |   +---css
 |   |   |   |   login.css
+|   |   |   +---hooks
+|   |   |   |   usePermission.tsx
 |   |   |   +---pages
+|   |   |   |   AdminPanel.tsx
 |   |   |   |   CreateCompany.tsx
 |   |   |   |   CreateProject.tsx
 |   |   |   |   Dashboard.tsx
@@ -59,6 +64,7 @@
 |   |   |   |   Projects.tsx
 |   |   |   |   Register.tsx
 |   |   |   |   TaskDetails.tsx
+|   |   |   |   Unauthorized.tsx
 |   |   |   App.css
 |   |   |   App.tsx
 |   |   |   index.css
@@ -268,6 +274,7 @@
 |   |   |   AssignGroupMembersCommand.cs
 |   |   |   CreateGroupCommand.cs
 |   |   +---Controllers
+|   |   |   AdminController.cs
 |   |   |   AuthController.cs
 |   |   |   CompanyController.cs
 |   |   |   DashboardController.cs
@@ -306,9 +313,12 @@
 |   |   |   AddUserToProjectRequest.cs
 |   |   |   AssignMembersDTO.cs
 |   |   |   AssignMembersRequestDTO.cs
+|   |   |   CreatePermissionDTO.cs
 |   |   |   GroupDetailsDTO.cs
 |   |   |   GroupRequestDTO.cs
 |   |   |   TaskDTO.cs
+|   |   |   UpdateRoleDTO.cs
+|   |   |   UpdateRolePermissionsDTO.cs
 |   |   |   UserDTO.cs
 |   |   +---Factories
 |   |   |   GroupFactory.cs
@@ -368,6 +378,10 @@
 |   |   |   20250323141058_AddStatusAndProgressToGroups.Designer.cs
 |   |   |   20250323144853_AddGroupIDToUserProject.cs
 |   |   |   20250323144853_AddGroupIDToUserProject.Designer.cs
+|   |   |   20250412131518_AddPermissionsDbSet.cs
+|   |   |   20250412131518_AddPermissionsDbSet.Designer.cs
+|   |   |   20250412145521_AddRolePermissionsTable.cs
+|   |   |   20250412145521_AddRolePermissionsTable.Designer.cs
 |   |   |   ApplicationDbContextModelSnapshot.cs
 |   |   +---Models
 |   |   +---obj
@@ -431,12 +445,51 @@
 |   |   |   IProjectRepository.cs
 |   |   |   LoggingProjectRepositoryDecorator.cs
 |   |   |   ProjectRepository.cs
+|   |   +---Security
+|   |   |   AdminPanelAccessHandler.cs
+|   |   |   AdminPanelAccessRequirement.cs
+|   |   |   PermissionHandler.cs
+|   |   |   PermissionRequirement.cs
 |   |   appsettings.Development.json
 |   |   appsettings.json
 |   |   Program.cs
 |   |   ProjectManagmentTool.csproj
 |   |   ProjectManagmentTool.csproj.user
 |   |   ProjectManagmentTool.http
+|   +---Tests
+|   |   +---bin
+|   |   |   +---Debug
+|   |   |   |   +---net8.0
+|   |   +---Controllers
+|   |   |   WeatherForecastController.cs
+|   |   +---obj
+|   |   |   +---Debug
+|   |   |   |   +---net8.0
+|   |   |   |   |   +---ref
+|   |   |   |   |   +---refint
+|   |   |   |   |   +---staticwebassets
+|   |   |   |   |   .NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+|   |   |   |   |   staticwebassets.removed.txt
+|   |   |   |   |   Tests.AssemblyInfo.cs
+|   |   |   |   |   Tests.AssemblyInfoInputs.cache
+|   |   |   |   |   Tests.assets.cache
+|   |   |   |   |   Tests.csproj.AssemblyReference.cache
+|   |   |   |   |   Tests.GeneratedMSBuildEditorConfig.editorconfig
+|   |   |   |   |   Tests.GlobalUsings.g.cs
+|   |   |   project.assets.json
+|   |   |   project.nuget.cache
+|   |   |   Tests.csproj.nuget.dgspec.json
+|   |   |   Tests.csproj.nuget.g.props
+|   |   |   Tests.csproj.nuget.g.targets
+|   |   +---Properties
+|   |   |   launchSettings.json
+|   |   appsettings.Development.json
+|   |   appsettings.json
+|   |   Program.cs
+|   |   Tests.csproj
+|   |   Tests.csproj.user
+|   |   Tests.http
+|   |   WeatherForecast.cs
 |   .Generate-FolderStructure.ps1
 |   .gitattributes
 |   .gitignore
