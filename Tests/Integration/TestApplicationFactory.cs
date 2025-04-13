@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Text.Encodings.Web;
-using System.Threading.Tasks;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -12,6 +9,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ProjectManagmentTool;
 using ProjectManagmentTool.Data;
+using System.Text.Encodings.Web;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MediatR;
+using System.Security.Claims;
 
 namespace Tests.Integration
 {
@@ -19,6 +20,9 @@ namespace Tests.Integration
     {
         // Generate a unique database name once for the lifetime of the factory instance.
         private readonly string _dbName = "TestDb_" + Guid.NewGuid().ToString();
+
+        // Do not override WithWebHostBuilder here.
+        // The base method will be used.
 
         protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
         {
@@ -39,6 +43,10 @@ namespace Tests.Integration
                 {
                     options.UseInMemoryDatabase(_dbName);
                 });
+
+                // Remove all MediatR registrations (IMediator and IRequestHandler registrations).
+                services.RemoveAll(typeof(IMediator));
+                services.RemoveAll(typeof(IRequestHandler<,>));
 
                 // Remove any previously registered authentication options.
                 var authDescriptors = services.Where(
